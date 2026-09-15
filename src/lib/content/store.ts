@@ -36,6 +36,16 @@ export async function loadContent(): Promise<ContentState> {
  * Save flow: validate -> back up previous valid version -> write -> confirm.
  * `expectedUpdatedAt` guards against overwriting newer changes.
  */
+export async function initializeDefaultContentIfMissing(): Promise<SiteContent> {
+  const state = await loadContent();
+  if (state.source === "remote") {
+    return state.content;
+  }
+
+  const next = cloneDefaultContent();
+  return saveContent(next);
+}
+
 export async function saveContent(
   next: SiteContent,
   expectedUpdatedAt?: string,

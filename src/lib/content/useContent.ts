@@ -33,7 +33,10 @@ export function useSaveContent() {
     mutationFn: async (input: { next: SiteContent; expectedUpdatedAt?: string }) =>
       saveContent(input.next, input.expectedUpdatedAt),
     onSuccess: (saved) => {
-      queryClient.setQueryData(contentQueryKey, { content: saved, source: "remote" } as ContentState);
+      queryClient.setQueryData(contentQueryKey, {
+        content: saved,
+        source: "remote",
+      } as ContentState);
     },
   });
 }

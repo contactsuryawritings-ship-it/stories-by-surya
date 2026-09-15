@@ -14,9 +14,15 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as FilmsRouteImport } from './routes/films'
-import { Route as StorySlugRouteImport } from './routes/story.$slug'
+import { Route as AdminAboutRouteImport } from './routes/admin.about'
+import { Route as AdminContactRouteImport } from './routes/admin.contact'
+import { Route as AdminEnquiriesRouteImport } from './routes/admin.enquiries'
+import { Route as AdminFilmsRouteImport } from './routes/admin.films'
+import { Route as AdminHomepageRouteImport } from './routes/admin.homepage'
+import { Route as AdminPhotosRouteImport } from './routes/admin.photos'
+import { Route as AdminSeoRouteImport } from './routes/admin.seo'
+import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as WorkIndexRouteImport } from './routes/work.index'
-import { Route as WorkCategoryRouteImport } from './routes/work.$category'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -43,51 +49,99 @@ const FilmsRoute = FilmsRouteImport.update({
   path: '/films',
   getParentRoute: () => rootRouteImport,
 } as any)
-const StorySlugRoute = StorySlugRouteImport.update({
-  id: '/story/$slug',
-  path: '/story/$slug',
-  getParentRoute: () => rootRouteImport,
+const AdminAboutRoute = AdminAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminContactRoute = AdminContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminEnquiriesRoute = AdminEnquiriesRouteImport.update({
+  id: '/enquiries',
+  path: '/enquiries',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFilmsRoute = AdminFilmsRouteImport.update({
+  id: '/films',
+  path: '/films',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminHomepageRoute = AdminHomepageRouteImport.update({
+  id: '/homepage',
+  path: '/homepage',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPhotosRoute = AdminPhotosRouteImport.update({
+  id: '/photos',
+  path: '/photos',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSeoRoute = AdminSeoRouteImport.update({
+  id: '/seo',
+  path: '/seo',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
 } as any)
 const WorkIndexRoute = WorkIndexRouteImport.update({
   id: '/work/',
   path: '/work/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkCategoryRoute = WorkCategoryRouteImport.update({
-  id: '/work/$category',
-  path: '/work/$category',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/contact': typeof ContactRoute
   '/films': typeof FilmsRoute
-  '/story/$slug': typeof StorySlugRoute
-  '/work/$category': typeof WorkCategoryRoute
+  '/admin/about': typeof AdminAboutRoute
+  '/admin/contact': typeof AdminContactRoute
+  '/admin/enquiries': typeof AdminEnquiriesRoute
+  '/admin/films': typeof AdminFilmsRoute
+  '/admin/homepage': typeof AdminHomepageRoute
+  '/admin/photos': typeof AdminPhotosRoute
+  '/admin/seo': typeof AdminSeoRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/work/': typeof WorkIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/contact': typeof ContactRoute
   '/films': typeof FilmsRoute
-  '/story/$slug': typeof StorySlugRoute
-  '/work/$category': typeof WorkCategoryRoute
+  '/admin/about': typeof AdminAboutRoute
+  '/admin/contact': typeof AdminContactRoute
+  '/admin/enquiries': typeof AdminEnquiriesRoute
+  '/admin/films': typeof AdminFilmsRoute
+  '/admin/homepage': typeof AdminHomepageRoute
+  '/admin/photos': typeof AdminPhotosRoute
+  '/admin/seo': typeof AdminSeoRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/work': typeof WorkIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/contact': typeof ContactRoute
   '/films': typeof FilmsRoute
-  '/story/$slug': typeof StorySlugRoute
-  '/work/$category': typeof WorkCategoryRoute
+  '/admin/about': typeof AdminAboutRoute
+  '/admin/contact': typeof AdminContactRoute
+  '/admin/enquiries': typeof AdminEnquiriesRoute
+  '/admin/films': typeof AdminFilmsRoute
+  '/admin/homepage': typeof AdminHomepageRoute
+  '/admin/photos': typeof AdminPhotosRoute
+  '/admin/seo': typeof AdminSeoRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/work/': typeof WorkIndexRoute
 }
 export interface FileRouteTypes {
@@ -98,8 +152,14 @@ export interface FileRouteTypes {
     | '/admin'
     | '/contact'
     | '/films'
-    | '/story/$slug'
-    | '/work/$category'
+    | '/admin/about'
+    | '/admin/contact'
+    | '/admin/enquiries'
+    | '/admin/films'
+    | '/admin/homepage'
+    | '/admin/photos'
+    | '/admin/seo'
+    | '/admin/settings'
     | '/work/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -108,8 +168,14 @@ export interface FileRouteTypes {
     | '/admin'
     | '/contact'
     | '/films'
-    | '/story/$slug'
-    | '/work/$category'
+    | '/admin/about'
+    | '/admin/contact'
+    | '/admin/enquiries'
+    | '/admin/films'
+    | '/admin/homepage'
+    | '/admin/photos'
+    | '/admin/seo'
+    | '/admin/settings'
     | '/work'
   id:
     | '__root__'
@@ -118,19 +184,23 @@ export interface FileRouteTypes {
     | '/admin'
     | '/contact'
     | '/films'
-    | '/story/$slug'
-    | '/work/$category'
+    | '/admin/about'
+    | '/admin/contact'
+    | '/admin/enquiries'
+    | '/admin/films'
+    | '/admin/homepage'
+    | '/admin/photos'
+    | '/admin/seo'
+    | '/admin/settings'
     | '/work/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
-  AdminRoute: typeof AdminRoute
+  AdminRoute: typeof AdminRouteWithChildren
   ContactRoute: typeof ContactRoute
   FilmsRoute: typeof FilmsRoute
-  StorySlugRoute: typeof StorySlugRoute
-  WorkCategoryRoute: typeof WorkCategoryRoute
   WorkIndexRoute: typeof WorkIndexRoute
 }
 
@@ -171,12 +241,61 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FilmsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/story/$slug': {
-      id: '/story/$slug'
-      path: '/story/$slug'
-      fullPath: '/story/$slug'
-      preLoaderRoute: typeof StorySlugRouteImport
-      parentRoute: typeof rootRouteImport
+    '/admin/about': {
+      id: '/admin/about'
+      path: '/about'
+      fullPath: '/admin/about'
+      preLoaderRoute: typeof AdminAboutRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/contact': {
+      id: '/admin/contact'
+      path: '/contact'
+      fullPath: '/admin/contact'
+      preLoaderRoute: typeof AdminContactRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/enquiries': {
+      id: '/admin/enquiries'
+      path: '/enquiries'
+      fullPath: '/admin/enquiries'
+      preLoaderRoute: typeof AdminEnquiriesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/films': {
+      id: '/admin/films'
+      path: '/films'
+      fullPath: '/admin/films'
+      preLoaderRoute: typeof AdminFilmsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/homepage': {
+      id: '/admin/homepage'
+      path: '/homepage'
+      fullPath: '/admin/homepage'
+      preLoaderRoute: typeof AdminHomepageRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/photos': {
+      id: '/admin/photos'
+      path: '/photos'
+      fullPath: '/admin/photos'
+      preLoaderRoute: typeof AdminPhotosRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/seo': {
+      id: '/admin/seo'
+      path: '/seo'
+      fullPath: '/admin/seo'
+      preLoaderRoute: typeof AdminSeoRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/work/': {
       id: '/work/'
@@ -185,24 +304,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/work/$category': {
-      id: '/work/$category'
-      path: '/work/$category'
-      fullPath: '/work/$category'
-      preLoaderRoute: typeof WorkCategoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
+
+interface AdminRouteChildren {
+  AdminAboutRoute: typeof AdminAboutRoute
+  AdminContactRoute: typeof AdminContactRoute
+  AdminEnquiriesRoute: typeof AdminEnquiriesRoute
+  AdminFilmsRoute: typeof AdminFilmsRoute
+  AdminHomepageRoute: typeof AdminHomepageRoute
+  AdminPhotosRoute: typeof AdminPhotosRoute
+  AdminSeoRoute: typeof AdminSeoRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminAboutRoute: AdminAboutRoute,
+  AdminContactRoute: AdminContactRoute,
+  AdminEnquiriesRoute: AdminEnquiriesRoute,
+  AdminFilmsRoute: AdminFilmsRoute,
+  AdminHomepageRoute: AdminHomepageRoute,
+  AdminPhotosRoute: AdminPhotosRoute,
+  AdminSeoRoute: AdminSeoRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
-  AdminRoute: AdminRoute,
+  AdminRoute: AdminRouteWithChildren,
   ContactRoute: ContactRoute,
   FilmsRoute: FilmsRoute,
-  StorySlugRoute: StorySlugRoute,
-  WorkCategoryRoute: WorkCategoryRoute,
   WorkIndexRoute: WorkIndexRoute,
 }
 export const routeTree = rootRouteImport

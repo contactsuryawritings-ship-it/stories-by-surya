@@ -31,10 +31,18 @@ function variance(index: number) {
   return ((h >>> 8) % 1000) / 1000;
 }
 
+function sourceAspect(image: ContentImage) {
+  const measured = image.width > 0 && image.height > 0 ? image.width / image.height : 1;
+  const orientation = image.orientation;
+  const fallback = orientation === "portrait" ? 2 / 3 : orientation === "landscape" ? 3 / 2 : 1;
+  const aspect = Number.isFinite(measured) && measured > 0 ? measured : fallback;
+  return Math.min(1.75, Math.max(0.62, aspect));
+}
+
 const CONFIG = {
-  mobile: { columns: 3, tileHeight: 200, rows: 8, gap: 6 },
-  tablet: { columns: 4, tileHeight: 190, rows: 8, gap: 8 },
-  desktop: { columns: 6, tileHeight: 180, rows: 9, gap: 8 },
+  mobile: { columns: 6, rows: 9, gap: 6 },
+  tablet: { columns: 8, rows: 9, gap: 8 },
+  desktop: { columns: 9, rows: 10, gap: 8 },
 } as const;
 
 export function DriftWall({
@@ -54,16 +62,26 @@ export function DriftWall({
   const columns = useMemo(() => {
     if (!items.length) return [];
     const total = cfg.columns * cfg.rows;
-    // Repeat and interleave the pool so small collections never look like
-    // identical rows, and never leave an empty tile.
-    const tiles: ContentImage[] = Array.from({ length: total }, (_, i) => {
-      const offset = Math.floor(i / cfg.columns) * (items.length > 1 ? 1 : 0);
-      const idx = items.length === 1 ? 0 : (i + offset + pick(i, items.length)) % items.length;
-      return items[idx]!;
-    });
-    return Array.from({ length: cfg.columns }, (_, c) =>
-      tiles.filter((_, i) => i % cfg.columns === c),
-    );
+    const packed = Array.from({ length: cfg.columns }, () => [] as ContentImage[]);
+    const heights = Array.from({ length: cfg.columns }, () => 0);
+    const lastIds = Array.from({ length: cfg.columns }, () => "");
+
+    for (let i = 0; i < total; i += 1) {
+      const columnIndex = heights.indexOf(Math.min(...heights));
+      let imageIndex = items.length === 1 ? 0 : (i + pick(i, items.length)) % items.length;
+      for (
+        let attempt = 0;
+        attempt < items.length && items[imageIndex]?.id === lastIds[columnIndex];
+        attempt += 1
+      ) {
+        imageIndex = (imageIndex + 1) % items.length;
+      }
+      const image = items[imageIndex]!;
+      packed[columnIndex]!.push(image);
+      lastIds[columnIndex] = image.id;
+      heights[columnIndex]! += 1 / sourceAspect(image);
+    }
+    return packed;
   }, [items, cfg.columns, cfg.rows]);
 
   useEffect(() => {
@@ -142,7 +160,10 @@ export function DriftWall({
                         <div
                           key={`${copy}-${i}-${image.id}`}
                           className="overflow-hidden bg-onyx"
-                          style={{ height: `${cfg.tileHeight}px`, marginBottom: `${cfg.gap}px` }}
+                          style={{
+                            aspectRatio: sourceAspect(image),
+                            marginBottom: `${cfg.gap}px`,
+                          }}
                         >
                           <img
                             src={image.src}
@@ -165,10 +186,7 @@ export function DriftWall({
         </div>
       </div>
       {/* Readability treatment over the photographs */}
-      <div
-        className="absolute inset-0"
-        style={{ background: `oklch(0.16 0.004 60 / ${dim})` }}
-      />
+      <div className="absolute inset-0" style={{ background: `oklch(0.16 0.004 60 / ${dim})` }} />
       <div
         className="absolute inset-0"
         style={{

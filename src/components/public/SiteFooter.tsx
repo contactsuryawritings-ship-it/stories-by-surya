@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 
 import { useContent } from "@/lib/content/useContent";
-import { visibleNav, visibleSocials } from "@/lib/content/selectors";
+import { socialHref, visibleNav, visibleSocials } from "@/lib/content/selectors";
 import { ContentLink } from "./ContentLink";
 
 export function SiteFooter() {
@@ -48,10 +48,11 @@ export function SiteFooter() {
             ? socials.map((social) => (
                 <a
                   key={social.id}
-                  href={social.url}
+                  href={socialHref(social)}
                   target="_blank"
                   rel="noreferrer noopener"
                   className="eyebrow opacity-70 hover:opacity-100"
+                  aria-label={`${social.label || social.platform} (opens in a new tab)`}
                 >
                   {social.label || social.platform}
                 </a>

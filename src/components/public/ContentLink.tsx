@@ -6,13 +6,17 @@ import type { ReactNode } from "react";
  * photographer. This resolves them to type-safe router links where the path is
  * a real route, and to a normal anchor otherwise — no unsafe casts.
  */
-const INTERNAL = ["/", "/work", "/about", "/films", "/contact"] as const;
+const LEGACY_ANCHORS = {
+  "/work": "/#work",
+  "/films": "/#films",
+  "/about": "/#about",
+  "/contact": "/#contact",
+} as const;
 
-type InternalPath = (typeof INTERNAL)[number];
-
-function asInternal(href: string): InternalPath | null {
-  const trimmed = href.trim().replace(/\/+$/, "") || "/";
-  return (INTERNAL as readonly string[]).includes(trimmed) ? (trimmed as InternalPath) : null;
+function asAnchor(href: string) {
+  const trimmed = href.trim();
+  if (trimmed.startsWith("#")) return `/${trimmed}`;
+  return LEGACY_ANCHORS[trimmed as keyof typeof LEGACY_ANCHORS] ?? null;
 }
 
 export function ContentLink({
@@ -28,16 +32,19 @@ export function ContentLink({
   onClick?: (() => void) | undefined;
   activeClassName?: string | undefined;
 }) {
-  const internal = asInternal(href);
+  const anchor = asAnchor(href);
 
-  if (internal) {
+  if (anchor) {
     return (
-      <Link
-        to={internal}
-        className={className}
-        onClick={onClick}
-        {...(activeClassName ? { activeProps: { className: activeClassName } } : {})}
-      >
+      <a href={anchor} className={className} onClick={onClick}>
+        {children}
+      </a>
+    );
+  }
+
+  if (href.trim() === "/") {
+    return (
+      <Link to="/" className={className} onClick={onClick}>
         {children}
       </Link>
     );

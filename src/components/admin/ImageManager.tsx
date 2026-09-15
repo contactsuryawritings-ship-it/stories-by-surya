@@ -141,12 +141,19 @@ export function ImageManager({
               <div className="flex items-center justify-between gap-4">
                 <span className="truncate">{item.fileName}</span>
                 <span className="eyebrow shrink-0 opacity-60">
-                  {item.status === "error" ? "Failed" : item.status === "done" ? "Done" : `${item.progress}%`}
+                  {item.status === "error"
+                    ? "Failed"
+                    : item.status === "done"
+                      ? "Done"
+                      : `${item.progress}%`}
                 </span>
               </div>
               <div className="mt-1 h-px w-full bg-hairline">
                 <div
-                  className={cn("h-px", item.status === "error" ? "bg-destructive" : "bg-foreground")}
+                  className={cn(
+                    "h-px",
+                    item.status === "error" ? "bg-destructive" : "bg-foreground",
+                  )}
                   style={{ width: `${item.status === "done" ? 100 : item.progress}%` }}
                 />
               </div>
@@ -173,10 +180,22 @@ export function ImageManager({
         </span>
         {selected.length ? (
           <>
-            <Btn onClick={() => setImages((list) => list.map((i) => (selected.includes(i.id) ? { ...i, visible: true } : i)))}>
+            <Btn
+              onClick={() =>
+                setImages((list) =>
+                  list.map((i) => (selected.includes(i.id) ? { ...i, visible: true } : i)),
+                )
+              }
+            >
               Show
             </Btn>
-            <Btn onClick={() => setImages((list) => list.map((i) => (selected.includes(i.id) ? { ...i, visible: false } : i)))}>
+            <Btn
+              onClick={() =>
+                setImages((list) =>
+                  list.map((i) => (selected.includes(i.id) ? { ...i, visible: false } : i)),
+                )
+              }
+            >
               Hide
             </Btn>
             <Btn variant="danger" onClick={() => void deleteSelected()}>

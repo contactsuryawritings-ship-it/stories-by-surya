@@ -1,18 +1,18 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
 import { DriftWall } from "@/components/drift-wall/DriftWall";
 import { EditorialImage } from "@/components/public/EditorialImage";
 import { EnquiryForm } from "@/components/public/EnquiryForm";
 import { FilmCard } from "@/components/public/FilmCard";
-import { GalleryCard } from "@/components/public/GalleryCard";
 import { PublicLayout } from "@/components/public/PublicLayout";
 import { Reveal } from "@/components/public/Reveal";
+import { ContentLink } from "@/components/public/ContentLink";
 import {
-  categoriesWithWork,
   driftWallPool,
-  featuredGalleries,
-  homepageSections,
+  portfolioPhotos,
   publishedFilms,
+  socialHref,
+  visibleSocials,
 } from "@/lib/content/selectors";
 import { useContent } from "@/lib/content/useContent";
 
@@ -72,12 +72,12 @@ function Hero() {
         ) : null}
         <div className="mt-10 flex flex-wrap items-center gap-8">
           {hero.ctaLabel && hero.ctaHref ? (
-            <Link
-              to={hero.ctaHref as never}
+            <ContentLink
+              href={hero.ctaHref}
               className="eyebrow border border-ivory/70 px-8 py-4 transition-colors duration-500 hover:bg-ivory hover:text-onyx"
             >
               {hero.ctaLabel}
-            </Link>
+            </ContentLink>
           ) : null}
           {hero.scrollLabel ? (
             <span className="eyebrow opacity-60">{hero.scrollLabel} ↓</span>
@@ -100,144 +100,121 @@ function SectionHeading({ eyebrow, heading }: { eyebrow?: string; heading?: stri
 
 function Home() {
   const { content } = useContent();
-  const sections = homepageSections(content);
-  const featured = featuredGalleries(content);
-  const categories = categoriesWithWork(content);
+  const photos = portfolioPhotos(content);
   const films = publishedFilms(content);
+  const socials = visibleSocials(content);
 
   return (
     <PublicLayout overlayHeader>
       <Hero />
 
       <div className="flex flex-col gap-28 py-28 md:gap-44 md:py-44">
-        {sections.map((section) => {
-          if (section.id === "featured") {
-            if (!featured.length) return null;
-            return (
-              <section key={section.id} aria-label={section.label || "Featured stories"}>
-                <SectionHeading eyebrow={section.eyebrow} heading={section.heading || section.label} />
-                <div className="shell grid gap-16 md:grid-cols-12 md:gap-y-32">
-                  {featured.map((gallery, index) => {
-                    const layout =
-                      index % 3 === 0
-                        ? "md:col-span-12"
-                        : index % 3 === 1
-                          ? "md:col-span-7"
-                          : "md:col-span-5 md:mt-24";
-                    return (
-                      <Reveal key={gallery.id} className={layout} delay={index * 40}>
-                        <GalleryCard
-                          gallery={gallery}
-                          index={index}
-                          ratio={index % 3 === 0 ? "16 / 9" : index % 3 === 1 ? "3 / 2" : "4 / 5"}
-                        />
-                      </Reveal>
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          }
+        <section id="work" aria-label="Selected work">
+          <SectionHeading eyebrow="Selected work" heading="Photographs with room to breathe." />
+          <div className="shell grid gap-12 md:grid-cols-12 md:gap-x-8 md:gap-y-28">
+            {photos.map((photo, index) => {
+              const layout =
+                index % 5 === 0
+                  ? "md:col-span-12"
+                  : index % 5 === 1
+                    ? "md:col-span-7"
+                    : index % 5 === 2
+                      ? "md:col-span-5 md:mt-24"
+                      : index % 5 === 3
+                        ? "md:col-span-5"
+                        : "md:col-span-7 md:mt-24";
+              const ratio =
+                index % 5 === 0 ? "16 / 9" : photo.orientation === "portrait" ? "4 / 5" : "3 / 2";
+              return (
+                <Reveal key={photo.id} className={layout} delay={index * 35}>
+                  <EditorialImage image={photo} ratio={ratio} />
+                </Reveal>
+              );
+            })}
+          </div>
+        </section>
 
-          if (section.id === "categories") {
-            if (!categories.length) return null;
-            return (
-              <section key={section.id} aria-label={section.label || "Collections"}>
-                <SectionHeading eyebrow={section.eyebrow} heading={section.heading || section.label} />
-                <div className="shell hairline-t">
-                  {categories.map((category, index) => (
-                    <Reveal key={category.id} delay={index * 40}>
-                      <Link
-                        to="/work/$category"
-                        params={{ category: category.slug }}
-                        className="group flex items-baseline justify-between gap-8 border-b border-hairline py-8 md:py-12"
-                      >
-                        <span className="display-md">{category.title}</span>
-                        {category.description ? (
-                          <span className="body-lead hidden max-w-sm md:block">
-                            {category.description}
-                          </span>
-                        ) : null}
-                        <span className="eyebrow shrink-0 opacity-40 transition-opacity duration-500 group-hover:opacity-90">
-                          View
-                        </span>
-                      </Link>
-                    </Reveal>
-                  ))}
-                </div>
-              </section>
-            );
-          }
+        <section id="films" aria-label="Films">
+          <SectionHeading eyebrow="Films" heading="Moving images, quietly held." />
+          <div className="shell grid gap-16 md:grid-cols-2">
+            {films.map((film, index) => (
+              <Reveal key={film.id} delay={index * 40}>
+                <FilmCard film={film} />
+              </Reveal>
+            ))}
+          </div>
+        </section>
 
-          if (section.id === "films") {
-            if (!films.length) return null;
-            return (
-              <section key={section.id} aria-label={section.label || "Films"}>
-                <SectionHeading eyebrow={section.eyebrow} heading={section.heading || section.label} />
-                <div className="shell grid gap-16 md:grid-cols-2">
-                  {films.slice(0, 2).map((film, index) => (
-                    <Reveal key={film.id} delay={index * 40}>
-                      <FilmCard film={film} />
-                    </Reveal>
-                  ))}
-                </div>
-              </section>
-            );
-          }
+        <section id="about" aria-label="About">
+          <div className="shell grid items-center gap-12 md:grid-cols-12 md:gap-20">
+            {content.about.portrait ? (
+              <Reveal className="md:col-span-5">
+                <EditorialImage image={content.about.portrait} ratio="4 / 5" />
+              </Reveal>
+            ) : null}
+            <Reveal
+              className={content.about.portrait ? "md:col-span-6 md:col-start-7" : "md:col-span-7"}
+            >
+              {content.about.eyebrow ? (
+                <p className="eyebrow opacity-55">{content.about.eyebrow}</p>
+              ) : null}
+              <h2 className="display-lg mt-5">{content.about.heading || "About"}</h2>
+              {content.about.bio ? (
+                <p className="body-lead mt-6 max-w-xl">{content.about.bio}</p>
+              ) : null}
+              {content.about.secondary ? (
+                <p className="mt-5 max-w-xl text-sm opacity-70">{content.about.secondary}</p>
+              ) : null}
+            </Reveal>
+          </div>
+        </section>
 
-          if (section.id === "about") {
-            const preview = content.homepage.aboutPreview || content.about.bio;
-            if (!preview && !content.about.portrait) return null;
-            return (
-              <section key={section.id} aria-label={section.label || "About"}>
-                <div className="shell grid items-center gap-12 md:grid-cols-12 md:gap-20">
-                  {content.about.portrait ? (
-                    <Reveal className="md:col-span-5">
-                      <EditorialImage image={content.about.portrait} ratio="4 / 5" />
-                    </Reveal>
-                  ) : null}
-                  <Reveal className="md:col-span-6 md:col-start-7">
-                    {section.eyebrow ? (
-                      <p className="eyebrow opacity-55">{section.eyebrow}</p>
-                    ) : null}
-                    {section.heading || content.about.heading ? (
-                      <h2 className="display-lg mt-5">{section.heading || content.about.heading}</h2>
-                    ) : null}
-                    {preview ? <p className="body-lead mt-6 max-w-xl">{preview}</p> : null}
-                    <Link to="/about" className="eyebrow mt-10 inline-block border-b border-foreground pb-1">
-                      Read more
-                    </Link>
-                  </Reveal>
-                </div>
-              </section>
-            );
-          }
-
-          if (section.id === "contact") {
-            return (
-              <section key={section.id} aria-label={section.label || "Enquire"}>
-                <div className="shell grid gap-12 md:grid-cols-12 md:gap-20">
-                  <Reveal className="md:col-span-5">
-                    {section.eyebrow ? (
-                      <p className="eyebrow opacity-55">{section.eyebrow}</p>
-                    ) : null}
-                    <h2 className="display-lg mt-5">
-                      {content.homepage.contactHeading || section.heading || "Enquire"}
-                    </h2>
-                    {content.homepage.contactBody ? (
-                      <p className="body-lead mt-6">{content.homepage.contactBody}</p>
-                    ) : null}
-                  </Reveal>
-                  <Reveal className="md:col-span-7">
-                    <EnquiryForm />
-                  </Reveal>
-                </div>
-              </section>
-            );
-          }
-
-          return null;
-        })}
+        <section id="contact" aria-label="Contact">
+          <div className="shell grid gap-12 md:grid-cols-12 md:gap-20">
+            <Reveal className="md:col-span-5">
+              {content.contact.eyebrow ? (
+                <p className="eyebrow opacity-55">{content.contact.eyebrow}</p>
+              ) : null}
+              <h2 className="display-lg mt-5">{content.contact.heading || "Contact"}</h2>
+              {content.contact.intro ? (
+                <p className="body-lead mt-6">{content.contact.intro}</p>
+              ) : null}
+              <div className="mt-8 flex flex-col gap-3">
+                {content.contact.email ? (
+                  <a
+                    className="eyebrow underline-offset-4 hover:underline"
+                    href={`mailto:${content.contact.email}`}
+                  >
+                    {content.contact.email}
+                  </a>
+                ) : null}
+                {content.contact.phone ? (
+                  <a
+                    className="eyebrow underline-offset-4 hover:underline"
+                    href={`tel:${content.contact.phone}`}
+                  >
+                    {content.contact.phone}
+                  </a>
+                ) : null}
+                {socials.map((social) => (
+                  <a
+                    key={social.id}
+                    className="eyebrow underline-offset-4 hover:underline"
+                    href={socialHref(social)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${social.label || social.platform} (opens in a new tab)`}
+                  >
+                    {social.label || social.platform}
+                  </a>
+                ))}
+              </div>
+            </Reveal>
+            <Reveal className="md:col-span-7">
+              <EnquiryForm />
+            </Reveal>
+          </div>
+        </section>
       </div>
     </PublicLayout>
   );

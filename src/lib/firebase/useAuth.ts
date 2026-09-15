@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import {
+  GoogleAuthProvider,
+  getRedirectResult,
   onAuthStateChanged,
-  signInWithEmailAndPassword,
+  signInWithPopup,
+  signInWithRedirect,
   signOut,
   type User,
 } from "firebase/auth";
@@ -16,7 +19,7 @@ export type AuthState = {
 
 /** Firebase Authentication state for the photographer dashboard. */
 export function useAuth(): AuthState & {
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: () => Promise<void>;
   signOutUser: () => Promise<void>;
 } {
   const [state, setState] = useState<AuthState>({
@@ -30,7 +33,9 @@ export function useAuth(): AuthState & {
       setState({ user: null, loading: false, configured: false });
       return;
     }
-    const unsubscribe = onAuthStateChanged(getFirebaseAuth(), (user) => {
+    const auth = getFirebaseAuth();
+    void getRedirectResult(auth).catch(() => undefined);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       setState({ user, loading: false, configured: true });
     });
     return unsubscribe;
@@ -38,8 +43,17 @@ export function useAuth(): AuthState & {
 
   return {
     ...state,
-    signIn: async (email, password) => {
-      await signInWithEmailAndPassword(getFirebaseAuth(), email, password);
+    signIn: async () => {
+      const provider = new GoogleAuthProvider();
+      try {
+        await signInWithPopup(getFirebaseAuth(), provider);
+      } catch (error) {
+        if (error instanceof Error && error.message.includes("auth/popup-blocked")) {
+          await signInWithRedirect(getFirebaseAuth(), provider);
+          return;
+        }
+        throw error;
+      }
     },
     signOutUser: async () => {
       await signOut(getFirebaseAuth());

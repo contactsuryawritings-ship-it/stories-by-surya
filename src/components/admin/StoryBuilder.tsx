@@ -167,8 +167,8 @@ export function StoryBuilder({
       ) : (
         <div className="mt-6">
           <EmptyState>
-            No layouts yet. Without a sequence the story falls back to an automatic editorial
-            rhythm using every visible photograph.
+            No layouts yet. Without a sequence the story falls back to an automatic editorial rhythm
+            using every visible photograph.
           </EmptyState>
         </div>
       )}

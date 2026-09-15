@@ -11,6 +11,7 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
   const nav = visibleNav(content);
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -25,6 +26,24 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
       document.body.style.overflow = "";
     };
   }, [menuOpen]);
+
+  useEffect(() => {
+    const sections = ["work", "films", "about", "contact"]
+      .map((id) => document.getElementById(id))
+      .filter((section): section is HTMLElement => Boolean(section));
+    if (!sections.length) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible) setActiveSection(visible.target.id);
+      },
+      { rootMargin: "-25% 0px -55%", threshold: [0.1, 0.35, 0.65] },
+    );
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, []);
 
   const light = overlay && !scrolled;
 
@@ -52,7 +71,11 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
               <ContentLink
                 key={item.id}
                 href={item.href}
-                className="eyebrow opacity-70 transition-opacity duration-500 hover:opacity-100"
+                className={`eyebrow transition-opacity duration-500 hover:opacity-100 ${
+                  activeSection && item.href.includes(`#${activeSection}`)
+                    ? "opacity-100"
+                    : "opacity-70"
+                }`}
                 activeClassName="eyebrow opacity-100"
               >
                 {item.label}
@@ -77,16 +100,17 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
         hidden={!menuOpen}
         className="fixed inset-0 z-40 bg-background md:hidden"
       >
-        <nav
-          aria-label="Mobile"
-          className="shell flex h-full flex-col justify-center gap-8 pt-20"
-        >
+        <nav aria-label="Mobile" className="shell flex h-full flex-col justify-center gap-8 pt-20">
           {nav.map((item) => (
             <ContentLink
               key={item.id}
               href={item.href}
               onClick={() => setMenuOpen(false)}
-              className="display-md"
+              className={`display-md ${
+                activeSection && item.href.includes(`#${activeSection}`)
+                  ? "opacity-100"
+                  : "opacity-70"
+              }`}
             >
               {item.label}
             </ContentLink>

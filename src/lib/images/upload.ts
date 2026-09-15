@@ -59,5 +59,6 @@ export async function uploadPortfolioImage(
     height: optimized.height,
     orientation: optimized.orientation,
     visible: true,
+    order: 0,
   };
 }

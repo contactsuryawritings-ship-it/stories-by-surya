@@ -1,10 +1,11 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 
-import { Btn, Notice, Panel, TextInput } from "@/components/admin/ui";
+import { Btn, Notice, Panel } from "@/components/admin/ui";
 import { DraftProvider, useDraft } from "@/lib/admin/draft";
+import { initializeDefaultContentIfMissing } from "@/lib/content/store";
 import { useContent } from "@/lib/content/useContent";
-import { adminEmail } from "@/lib/firebase/config";
+import { adminEmails } from "@/lib/firebase/config";
 import { useAuth } from "@/lib/firebase/useAuth";
 
 export const Route = createFileRoute("/admin")({
@@ -21,35 +22,23 @@ export const Route = createFileRoute("/admin")({
 });
 
 const NAV = [
-  { to: "/admin", label: "Dashboard", exact: true },
-  { to: "/admin/galleries", label: "Galleries", exact: false },
+  { to: "/admin/photos", label: "Photos", exact: false },
   { to: "/admin/films", label: "Films", exact: false },
-  { to: "/admin/homepage", label: "Homepage", exact: false },
-  { to: "/admin/about", label: "About", exact: false },
-  { to: "/admin/contact", label: "Contact", exact: false },
-  { to: "/admin/enquiries", label: "Enquiries", exact: false },
-  { to: "/admin/seo", label: "SEO", exact: false },
+  { to: "/admin/homepage", label: "Content", exact: false },
   { to: "/admin/settings", label: "Settings", exact: false },
 ] as const;
 
-function SignInScreen({
-  onSignIn,
-}: {
-  onSignIn: (email: string, password: string) => Promise<void>;
-}) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+function SignInScreen({ onSignIn }: { onSignIn: () => Promise<void> }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
+  async function handleGoogleSignIn() {
     setBusy(true);
     setError("");
     try {
-      await onSignIn(email, password);
+      await onSignIn();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign in failed.");
+      setError(err instanceof Error ? err.message : "Google sign in failed.");
     } finally {
       setBusy(false);
     }
@@ -57,38 +46,21 @@ function SignInScreen({
 
   return (
     <div className="flex min-h-screen items-center justify-center px-6">
-      <form onSubmit={submit} className="w-full max-w-sm">
+      <div className="w-full max-w-sm">
         <h1 className="font-display text-3xl">Studio</h1>
         <p className="mt-2 text-sm text-muted-foreground">Sign in to manage the website.</p>
 
         <div className="mt-8 grid gap-4">
-          <label className="block">
-            <span className="eyebrow block opacity-60">Email</span>
-            <span className="mt-2 block">
-              <TextInput type="email" value={email} onChange={setEmail} />
-            </span>
-          </label>
-          <label className="block">
-            <span className="eyebrow block opacity-60">Password</span>
-            <span className="mt-2 block">
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="w-full border border-hairline bg-background px-3 py-2 text-sm font-light outline-none focus:border-foreground"
-              />
-            </span>
-          </label>
           {error ? <Notice tone="error">{error}</Notice> : null}
-          <Btn type="submit" variant="primary" disabled={busy}>
-            {busy ? "Signing in" : "Sign in"}
+          <Btn variant="primary" disabled={busy} onClick={() => void handleGoogleSignIn()}>
+            {busy ? "Continuing with Google" : "Continue with Google"}
           </Btn>
         </div>
 
         <Link to="/" className="eyebrow mt-8 inline-block opacity-50 hover:opacity-100">
           Back to website
         </Link>
-      </form>
+      </div>
     </div>
   );
 }
@@ -103,11 +75,17 @@ function SaveBar({ onSignOut, email }: { onSignOut: (() => void) | null; email: 
           {dirty ? "Unsaved changes" : savedAt ? "All changes saved" : "No changes"}
         </span>
         <span className="ml-auto flex flex-wrap items-center gap-2">
-          {email ? <span className="hidden text-xs text-muted-foreground sm:inline">{email}</span> : null}
+          {email ? (
+            <span className="hidden text-xs text-muted-foreground sm:inline">{email}</span>
+          ) : null}
           <Btn onClick={discard} disabled={!dirty || saving}>
             Discard
           </Btn>
-          <Btn variant="primary" onClick={() => void save()} disabled={!dirty || saving || !canPersist}>
+          <Btn
+            variant="primary"
+            onClick={() => void save()}
+            disabled={!dirty || saving || !canPersist}
+          >
             {saving ? "Saving" : "Save"}
           </Btn>
           {onSignOut ? <Btn onClick={onSignOut}>Sign out</Btn> : null}
@@ -122,9 +100,24 @@ function SaveBar({ onSignOut, email }: { onSignOut: (() => void) | null; email: 
   );
 }
 
-function DashboardShell({ onSignOut, email }: { onSignOut: (() => void) | null; email: string | null }) {
+function DashboardShell({
+  onSignOut,
+  email,
+}: {
+  onSignOut: (() => void) | null;
+  email: string | null;
+}) {
   const { canPersist } = useDraft();
   const { source } = useContent();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [initializing, setInitializing] = useState(false);
+
+  useEffect(() => {
+    if (location.pathname === "/admin") {
+      void navigate({ to: "/admin/photos" });
+    }
+  }, [location.pathname, navigate]);
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -160,11 +153,27 @@ function DashboardShell({ onSignOut, email }: { onSignOut: (() => void) | null; 
               </Notice>
             </div>
           ) : source === "default" ? (
-            <div className="mb-6">
+            <div className="mb-6 space-y-3">
               <Notice tone="info">
                 No saved content was found yet. You are editing the starter structure — your first
                 save will create data.json.
               </Notice>
+              <div>
+                <Btn
+                  variant="primary"
+                  disabled={initializing}
+                  onClick={async () => {
+                    setInitializing(true);
+                    try {
+                      await initializeDefaultContentIfMissing();
+                    } finally {
+                      setInitializing(false);
+                    }
+                  }}
+                >
+                  {initializing ? "Initializing" : "Initialize production data"}
+                </Btn>
+              </div>
             </div>
           ) : null}
           <Outlet />
@@ -185,6 +194,18 @@ function AdminLayout() {
     );
   }
 
+  if (!adminEmails.length) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-6">
+        <Panel title="Admin access not configured" className="max-w-md">
+          <p className="text-sm text-muted-foreground">
+            Authorized Google admin accounts are not configured for production access.
+          </p>
+        </Panel>
+      </div>
+    );
+  }
+
   // Local development without Firebase: the dashboard is usable, saving is not.
   if (!configured) {
     return (
@@ -194,16 +215,19 @@ function AdminLayout() {
     );
   }
 
-  if (!user) return <SignInScreen onSignIn={signIn} />;
+  if (!user) return <SignInScreen onSignIn={() => signIn()} />;
 
-  if (adminEmail && (user.email ?? "").toLowerCase() !== adminEmail) {
+  const normalizedUserEmail = (user.email ?? "").trim().toLowerCase();
+  const isAuthorizedAdmin = adminEmails.includes(normalizedUserEmail);
+
+  if (!isAuthorizedAdmin) {
     return (
       <div className="flex min-h-screen items-center justify-center px-6">
-        <Panel title="Not authorised" className="max-w-md">
+        <Panel title="This Google account is not authorized" className="max-w-md">
           <p className="text-sm text-muted-foreground">
-            This account may not manage the website.
+            This Google account may not manage the website.
           </p>
-          <div className="mt-5">
+          <div className="mt-5 flex gap-2">
             <Btn onClick={() => void signOutUser()}>Sign out</Btn>
           </div>
         </Panel>

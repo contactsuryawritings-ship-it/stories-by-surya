@@ -1,0 +1,15 @@
+[
+  {
+    "origin": [
+      "http://localhost:8080",
+      "http://localhost:8081"
+    ],
+    "method": ["GET", "HEAD"],
+    "responseHeader": [
+      "Content-Type",
+      "Content-Length",
+      "ETag"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]

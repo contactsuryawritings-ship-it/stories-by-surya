@@ -1,10 +1,4 @@
-import type {
-  Category,
-  ContentImage,
-  Film,
-  Gallery,
-  SiteContent,
-} from "./schema";
+import type { Category, ContentImage, Film, Gallery, SiteContent, Social } from "./schema";
 
 const byOrder = <T extends { order: number }>(a: T, b: T) => a.order - b.order;
 
@@ -22,9 +16,7 @@ export function visibleCategories(content: SiteContent): Category[] {
 
 export function categoriesWithWork(content: SiteContent): Category[] {
   const published = publishedGalleries(content);
-  return visibleCategories(content).filter((c) =>
-    published.some((g) => g.categoryId === c.id),
-  );
+  return visibleCategories(content).filter((c) => published.some((g) => g.categoryId === c.id));
 }
 
 export function galleriesInCategory(content: SiteContent, categoryId: string): Gallery[] {
@@ -62,7 +54,16 @@ export function visibleNav(content: SiteContent) {
 }
 
 export function visibleSocials(content: SiteContent) {
-  return content.socials.filter((s) => s.visible && s.url.trim().length > 0);
+  return content.socials.filter((s) => s.visible && socialHref(s).length > 0);
+}
+
+export function socialHref(social: Social) {
+  const value = social.url.trim();
+  if (social.platform.toLowerCase() === "whatsapp" && value && !/^https?:\/\//i.test(value)) {
+    const digits = value.replace(/\D/g, "");
+    return digits ? `https://wa.me/${digits}` : "";
+  }
+  return value;
 }
 
 export function visibleFormFields(content: SiteContent) {
@@ -75,6 +76,12 @@ export function homepageSections(content: SiteContent) {
 
 /** Every published photograph — the Drift Wall image pool. */
 export function driftWallPool(content: SiteContent): ContentImage[] {
+  return portfolioPhotos(content);
+}
+
+export function portfolioPhotos(content: SiteContent): ContentImage[] {
+  const photos = content.photos.filter((image) => image.visible);
+  if (photos.length) return photos;
   return publishedGalleries(content).flatMap(visibleImages);
 }
 
@@ -96,7 +103,8 @@ export function gallerySections(gallery: Gallery) {
   let index = 0;
   let step = 0;
   while (index < images.length) {
-    const pattern = step === 0 ? "hero" : step % 3 === 1 ? "pair" : step % 3 === 2 ? "full" : "asymmetric";
+    const pattern =
+      step === 0 ? "hero" : step % 3 === 1 ? "pair" : step % 3 === 2 ? "full" : "asymmetric";
     const take = pattern === "pair" ? 2 : pattern === "asymmetric" ? 3 : 1;
     const slice = images.slice(index, index + take).map((i) => i.id);
     if (!slice.length) break;

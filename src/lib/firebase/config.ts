@@ -31,16 +31,17 @@ export const isFirebaseConfigured =
   firebaseConfig.storageBucket.length > 0 &&
   firebaseConfig.appId.length > 0;
 
-/**
- * Optional allow-list for the dashboard. When set, only this Firebase Auth
- * account may open the dashboard; otherwise any account in the project may.
- */
-export const adminEmail = (env["VITE_ADMIN_EMAIL"] ?? "").trim().toLowerCase();
+/** Normalized Google accounts allowed to use the private dashboard. */
+export const adminEmails = (env["VITE_ADMIN_EMAILS"] ?? "")
+  .split(",")
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean);
 
 /** Storage paths used by the app. */
 export const storagePaths = {
   content: "content/data.json",
   contentBackup: (stamp: string) => `content/backups/data-${stamp}.json`,
+  portfolioImage: (imageId: string, ext = "webp") => `images/portfolio/${imageId}.${ext}`,
   galleryImage: (galleryId: string, imageId: string, ext = "webp") =>
     `images/${galleryId}/${imageId}.${ext}`,
   filmCover: (filmId: string, ext = "webp") => `films/${filmId}/cover.${ext}`,

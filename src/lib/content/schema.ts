@@ -14,6 +14,7 @@ export const imageSchema = z.object({
   height: z.number().int().positive().default(1600),
   orientation: z.enum(["landscape", "portrait", "square"]).default("landscape"),
   visible: z.boolean().default(true),
+  order: z.number().default(0),
 });
 
 export const sectionTypeSchema = z.enum([
@@ -118,6 +119,8 @@ export const socialSchema = z.object({
   visible: z.boolean().default(true),
 });
 
+export const SOCIAL_PLATFORMS = ["instagram", "youtube", "facebook", "whatsapp"] as const;
+
 export const formFieldSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
@@ -131,6 +134,7 @@ export const formFieldSchema = z.object({
 export const contentSchema = z.object({
   version: z.number().default(1),
   updatedAt: z.string().default(""),
+  photos: z.array(imageSchema).default([]),
   brand: z.object({
     name: z.string().default("Stories by Surya"),
     wordmark: z.string().default("Stories by Surya"),
@@ -171,9 +175,7 @@ export const contentSchema = z.object({
     bio: z.string().default(""),
     secondary: z.string().default(""),
     portrait: imageSchema.nullable().default(null),
-    stats: z
-      .array(z.object({ id: z.string(), label: z.string(), value: z.string() }))
-      .default([]),
+    stats: z.array(z.object({ id: z.string(), label: z.string(), value: z.string() })).default([]),
   }),
   contact: z.object({
     eyebrow: z.string().default(""),
@@ -222,9 +224,36 @@ export const enquirySchema = z.object({
 export type Enquiry = z.infer<typeof enquirySchema>;
 
 export function parseContent(input: unknown): SiteContent {
-  return contentSchema.parse(input);
+  return contentSchema.parse(migrateContent(input));
 }
 
 export function safeParseContent(input: unknown) {
-  return contentSchema.safeParse(input);
+  return contentSchema.safeParse(migrateContent(input));
+}
+
+/** Keep existing gallery-backed content readable while photos become the V1 source. */
+function migrateContent(input: unknown): unknown {
+  if (!input || typeof input !== "object") return input;
+  const value = input as { photos?: unknown; galleries?: unknown };
+  if (!Array.isArray(value.galleries)) return input;
+
+  const legacyPhotos = value.galleries.flatMap((gallery) => {
+    if (!gallery || typeof gallery !== "object") return [];
+    const item = gallery as { images?: unknown };
+    return Array.isArray(item.images) ? item.images : [];
+  });
+  const photos = [...(Array.isArray(value.photos) ? value.photos : []), ...legacyPhotos];
+  const seen = new Set<string>();
+  const uniquePhotos = photos.filter((photo) => {
+    if (!photo || typeof photo !== "object") return false;
+    const image = photo as { id?: unknown; path?: unknown; src?: unknown };
+    const key = String(image.id || image.path || image.src || "");
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return {
+    ...value,
+    photos: uniquePhotos.map((photo, index) => ({ ...(photo as object), order: index })),
+  };
 }

@@ -1,6 +1,7 @@
-import { deleteObject, getBytes, listAll, ref, uploadString } from "firebase/storage";
+import { deleteObject, getBytes, listAll, ref } from "firebase/storage";
+import { httpsCallable, getFunctions } from "firebase/functions";
 
-import { getFirebaseStorage, isFirebaseConfigured } from "../firebase/app";
+import { getFirebaseApp, getFirebaseStorage, isFirebaseConfigured } from "../firebase/app";
 import { storagePaths } from "../firebase/config";
 import { enquirySchema, type Enquiry } from "../content/schema";
 
@@ -48,14 +49,14 @@ const storageAdapter: EnquiryAdapter = {
   available: true,
 
   async submit(values) {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const payload: Enquiry = { id, createdAt: new Date().toISOString(), values };
-    await uploadString(
-      ref(getFirebaseStorage(), storagePaths.enquiry(id)),
-      JSON.stringify(payload, null, 2),
-      "raw",
-      { contentType: "application/json" },
-    );
+    const submitEnquiry = httpsCallable<
+      { values: Record<string, string> },
+      { ok: true; id: string }
+    >(getFunctions(getFirebaseApp(), "us-central1"), "submitEnquiry");
+    const result = await submitEnquiry({ values });
+    if (!result.data.ok) {
+      throw new Error("Your enquiry could not be sent.");
+    }
   },
 
   async list() {

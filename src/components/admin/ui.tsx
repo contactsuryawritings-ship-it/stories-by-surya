@@ -204,7 +204,10 @@ export function Notice({
     error: "border-destructive bg-destructive/10 text-destructive",
   };
   return (
-    <p className={cn("border px-4 py-3 text-sm", tones[tone])} role={tone === "error" ? "alert" : "status"}>
+    <p
+      className={cn("border px-4 py-3 text-sm", tones[tone])}
+      role={tone === "error" ? "alert" : "status"}
+    >
       {children}
     </p>
   );

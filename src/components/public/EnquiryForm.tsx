@@ -57,16 +57,19 @@ export function EnquiryForm() {
         const shared =
           "mt-3 w-full border-0 border-b border-hairline bg-transparent pb-3 text-base font-light outline-none transition-colors focus:border-foreground";
         return (
-          <div
-            key={field.id}
-            className={field.type === "textarea" ? "sm:col-span-2" : undefined}
-          >
+          <div key={field.id} className={field.type === "textarea" ? "sm:col-span-2" : undefined}>
             <label htmlFor={id} className="eyebrow opacity-60">
               {field.label}
               {field.required ? " *" : ""}
             </label>
             {field.type === "textarea" ? (
-              <textarea id={id} name={field.id} required={field.required} rows={4} className={shared} />
+              <textarea
+                id={id}
+                name={field.id}
+                required={field.required}
+                rows={4}
+                className={shared}
+              />
             ) : field.type === "select" ? (
               <select id={id} name={field.id} required={field.required} className={shared}>
                 <option value="">—</option>

@@ -30,7 +30,7 @@ type DraftContextValue = {
   error: string | null;
   savedAt: string | null;
   update: (recipe: (draft: SiteContent) => SiteContent) => void;
-  save: () => Promise<void>;
+  save: (nextDraft?: SiteContent) => Promise<void>;
   discard: () => void;
 };
 
@@ -65,34 +65,60 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     setSession({ draft: content, base: content.updatedAt, dirty: false });
   }, [content]);
 
-  const save = useCallback(async () => {
-    setError(null);
+  const save = useCallback(
+    async (nextDraft = session.draft) => {
+      setError(null);
 
-    const parsed = safeParseContent(session.draft);
-    if (!parsed.success) {
-      const issue = parsed.error.issues[0];
-      setError(
-        issue ? `${issue.path.join(".") || "content"}: ${issue.message}` : "Content is not valid.",
-      );
-      return;
-    }
+      const parsed = safeParseContent(nextDraft);
+      if (!parsed.success) {
+        const issue = parsed.error.issues[0];
+        setError(
+          issue
+            ? `${issue.path.join(".") || "content"}: ${issue.message}`
+            : "Content is not valid.",
+        );
+        return;
+      }
 
-    if (!isFirebaseConfigured) {
-      setError("Firebase is not configured, so changes cannot be saved yet.");
-      return;
-    }
+      for (const social of parsed.data.socials) {
+        const value = social.url.trim();
+        if (!value) continue;
+        const isWhatsAppNumber =
+          social.platform.toLowerCase() === "whatsapp" && !/^https?:\/\//i.test(value);
+        if (isWhatsAppNumber) {
+          if (value.replace(/\D/g, "").length < 7) {
+            setError(`${social.label || social.platform}: enter a valid phone number or URL.`);
+            return;
+          }
+          continue;
+        }
+        try {
+          const url = new URL(value);
+          if (!/^https?:$/.test(url.protocol)) throw new Error("unsupported protocol");
+        } catch {
+          setError(`${social.label || social.platform}: enter a valid http(s) URL.`);
+          return;
+        }
+      }
 
-    try {
-      const saved = await saveMutation.mutateAsync({
-        next: parsed.data,
-        ...(session.base ? { expectedUpdatedAt: session.base } : {}),
-      });
-      setSession({ draft: saved, base: saved.updatedAt, dirty: false });
-      setSavedAt(saved.updatedAt);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Changes could not be saved.");
-    }
-  }, [saveMutation, session.base, session.draft]);
+      if (!isFirebaseConfigured) {
+        setError("Firebase is not configured, so changes cannot be saved yet.");
+        return;
+      }
+
+      try {
+        const saved = await saveMutation.mutateAsync({
+          next: parsed.data,
+          ...(session.base ? { expectedUpdatedAt: session.base } : {}),
+        });
+        setSession({ draft: saved, base: saved.updatedAt, dirty: false });
+        setSavedAt(saved.updatedAt);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Changes could not be saved.");
+      }
+    },
+    [saveMutation, session.base, session.draft],
+  );
 
   const value = useMemo<DraftContextValue>(
     () => ({
