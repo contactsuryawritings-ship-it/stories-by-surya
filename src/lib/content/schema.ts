@@ -21,10 +21,28 @@ export const sectionTypeSchema = z.enum([
   "full",
   "pair",
   "portrait-pair",
+  "landscape-pair",
   "asymmetric",
   "image-text",
   "whitespace",
 ]);
+
+/** Curated editorial layouts, with how many photographs each one holds. */
+export const SECTION_LAYOUTS: {
+  type: z.infer<typeof sectionTypeSchema>;
+  label: string;
+  capacity: number;
+  usesText: boolean;
+}[] = [
+  { type: "hero", label: "Hero", capacity: 1, usesText: false },
+  { type: "full", label: "Full width", capacity: 1, usesText: false },
+  { type: "pair", label: "Pair", capacity: 2, usesText: false },
+  { type: "portrait-pair", label: "Portrait pair", capacity: 2, usesText: false },
+  { type: "landscape-pair", label: "Landscape pair", capacity: 2, usesText: false },
+  { type: "asymmetric", label: "Editorial / asymmetric", capacity: 3, usesText: false },
+  { type: "image-text", label: "Image + text", capacity: 1, usesText: true },
+  { type: "whitespace", label: "Quiet space / words", capacity: 0, usesText: true },
+];
 
 export const gallerySectionSchema = z.object({
   id: z.string().min(1),

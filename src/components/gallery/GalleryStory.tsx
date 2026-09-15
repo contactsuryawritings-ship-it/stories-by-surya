@@ -52,6 +52,15 @@ function SectionRenderer({
         </div>
       );
 
+    case "landscape-pair":
+      return (
+        <div className="shell grid gap-4 md:grid-cols-2 md:gap-6">
+          {images.slice(0, 2).map((image) => (
+            <EditorialImage key={image.id} image={image} ratio="16 / 9" />
+          ))}
+        </div>
+      );
+
     case "asymmetric":
       return (
         <div className="shell grid gap-4 md:grid-cols-12 md:gap-6">
