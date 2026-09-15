@@ -1,16 +1,9 @@
-import {
-  getBytes,
-  getDownloadURL,
-  ref,
-  uploadString,
-  listAll,
-  deleteObject,
-} from "firebase/storage";
+import { getBytes, getDownloadURL, ref, uploadString, deleteObject } from "firebase/storage";
 
 import { getFirebaseStorage, isFirebaseConfigured } from "../firebase/app";
 import { storagePaths } from "../firebase/config";
 import { cloneDefaultContent, defaultContent } from "./default-data";
-import { safeParseContent, type SiteContent, type Enquiry } from "./schema";
+import { safeParseContent, type SiteContent } from "./schema";
 
 export type ContentState = {
   content: SiteContent;
@@ -94,42 +87,6 @@ export async function saveContent(
   const verified = safeParseContent(JSON.parse(decoder.decode(verifyBytes)));
   if (!verified.success) throw new Error("Save could not be verified.");
   return verified.data;
-}
-
-/* ---------------- Enquiries (stored as JSON objects, no database) ---------------- */
-
-export async function submitEnquiry(values: Record<string, string>): Promise<void> {
-  if (!isFirebaseConfigured) throw new Error("Enquiries are not connected yet.");
-  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const payload: Enquiry = { id, createdAt: new Date().toISOString(), values };
-  await uploadString(
-    ref(getFirebaseStorage(), storagePaths.enquiry(id)),
-    JSON.stringify(payload, null, 2),
-    "raw",
-    { contentType: "application/json" },
-  );
-}
-
-export async function listEnquiries(): Promise<Enquiry[]> {
-  const storage = getFirebaseStorage();
-  const listing = await listAll(ref(storage, storagePaths.enquiriesDir));
-  const items = await Promise.all(
-    listing.items.map(async (item) => {
-      try {
-        const bytes = await getBytes(item);
-        return JSON.parse(decoder.decode(bytes)) as Enquiry;
-      } catch {
-        return null;
-      }
-    }),
-  );
-  return items
-    .filter((x): x is Enquiry => Boolean(x))
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-}
-
-export async function deleteEnquiry(id: string): Promise<void> {
-  await deleteObject(ref(getFirebaseStorage(), storagePaths.enquiry(id)));
 }
 
 /* ---------------- Storage helpers ---------------- */

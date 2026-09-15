@@ -22,7 +22,7 @@ export function EnquiryForm() {
     setStatus("sending");
     setError("");
     try {
-      await submitEnquiry(values);
+      await enquiryAdapter.submit(values);
       setStatus("sent");
       form.reset();
     } catch (err) {
@@ -31,10 +31,13 @@ export function EnquiryForm() {
     }
   }
 
-  if (!isFirebaseConfigured) {
+  // No persistence adapter configured: say so plainly rather than accepting an
+  // enquiry that would silently go nowhere.
+  if (!enquiryAdapter.available) {
     return (
       <p className="body-lead">
-        The enquiry form is not connected yet. Please use the contact details listed.
+        The enquiry form is not connected yet.
+        {content.contact.email ? ` Please write to ${content.contact.email}.` : ""}
       </p>
     );
   }
