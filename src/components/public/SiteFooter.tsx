@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 
 import { useContent } from "@/lib/content/useContent";
 import { visibleNav, visibleSocials } from "@/lib/content/selectors";
+import { ContentLink } from "./ContentLink";
 
 export function SiteFooter() {
   const { content } = useContent();
@@ -21,9 +22,13 @@ export function SiteFooter() {
         {footer.showNav && nav.length ? (
           <nav aria-label="Footer" className="flex flex-col gap-3">
             {nav.map((item) => (
-              <Link key={item.id} to={item.href as never} className="eyebrow opacity-70 hover:opacity-100">
+              <ContentLink
+                key={item.id}
+                href={item.href}
+                className="eyebrow opacity-70 hover:opacity-100"
+              >
                 {item.label}
-              </Link>
+              </ContentLink>
             ))}
           </nav>
         ) : null}
@@ -58,7 +63,7 @@ export function SiteFooter() {
         <p className="eyebrow opacity-50">
           © {year} {footer.copyright || brand.name}
         </p>
-        <Link to={"/admin" as never} className="eyebrow opacity-40 hover:opacity-80">
+        <Link to="/admin" className="eyebrow opacity-40 hover:opacity-80">
           Studio
         </Link>
       </div>

@@ -2,8 +2,7 @@ import { useState } from "react";
 
 import { useContent } from "@/lib/content/useContent";
 import { visibleFormFields } from "@/lib/content/selectors";
-import { submitEnquiry } from "@/lib/content/store";
-import { isFirebaseConfigured } from "@/lib/firebase/app";
+import { enquiryAdapter } from "@/lib/enquiries/adapter";
 
 export function EnquiryForm() {
   const { content } = useContent();
