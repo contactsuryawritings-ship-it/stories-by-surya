@@ -6,9 +6,8 @@ import { findGalleryBySlug, publishedGalleries } from "@/lib/content/selectors";
 import { useContent } from "@/lib/content/useContent";
 
 export const Route = createFileRoute("/story/$slug")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    preview: search["preview"] === "1" || search["preview"] === true ? true : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { preview?: true } =>
+    search["preview"] === "1" || search["preview"] === true ? { preview: true } : {},
   head: ({ params }) => {
     const label = params.slug
       .split("-")
