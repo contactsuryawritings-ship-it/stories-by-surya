@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { useContent } from "@/lib/content/useContent";
+import { ContentLink } from "./ContentLink";
 import { visibleNav } from "@/lib/content/selectors";
 import { cn } from "@/lib/utils";
 
@@ -48,14 +49,14 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
 
           <nav aria-label="Primary" className="hidden items-center gap-10 md:flex">
             {nav.map((item) => (
-              <Link
+              <ContentLink
                 key={item.id}
-                to={item.href as never}
+                href={item.href}
                 className="eyebrow opacity-70 transition-opacity duration-500 hover:opacity-100"
-                activeProps={{ className: "eyebrow opacity-100" }}
+                activeClassName="eyebrow opacity-100"
               >
                 {item.label}
-              </Link>
+              </ContentLink>
             ))}
           </nav>
 
@@ -81,14 +82,14 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
           className="shell flex h-full flex-col justify-center gap-8 pt-20"
         >
           {nav.map((item) => (
-            <Link
+            <ContentLink
               key={item.id}
-              to={item.href as never}
+              href={item.href}
               onClick={() => setMenuOpen(false)}
               className="display-md"
             >
               {item.label}
-            </Link>
+            </ContentLink>
           ))}
         </nav>
       </div>

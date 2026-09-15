@@ -25,9 +25,9 @@ export function PageIntro({
   title,
   intro,
 }: {
-  eyebrow?: string;
+  eyebrow?: string | undefined;
   title: string;
-  intro?: string;
+  intro?: string | undefined;
 }) {
   return (
     <header className="shell pt-[168px] pb-16 md:pb-24">

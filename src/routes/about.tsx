@@ -31,11 +31,7 @@ function AboutPage() {
 
   return (
     <PublicLayout>
-      <PageIntro
-        eyebrow={about.eyebrow}
-        title={about.heading || "About"}
-        {...(about.bio ? {} : {})}
-      />
+      <PageIntro eyebrow={about.eyebrow} title={about.heading || "About"} />
 
       {!hasBody ? (
         <p className="shell body-lead pb-10">
