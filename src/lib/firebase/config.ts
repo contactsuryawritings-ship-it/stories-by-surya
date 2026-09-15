@@ -31,6 +31,12 @@ export const isFirebaseConfigured =
   firebaseConfig.storageBucket.length > 0 &&
   firebaseConfig.appId.length > 0;
 
+/**
+ * Optional allow-list for the dashboard. When set, only this Firebase Auth
+ * account may open the dashboard; otherwise any account in the project may.
+ */
+export const adminEmail = (env["VITE_ADMIN_EMAIL"] ?? "").trim().toLowerCase();
+
 /** Storage paths used by the app. */
 export const storagePaths = {
   content: "content/data.json",
