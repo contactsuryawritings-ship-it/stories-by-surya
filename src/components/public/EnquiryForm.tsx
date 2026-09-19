@@ -1,8 +1,7 @@
 import { useState } from "react";
 
 import { useContent } from "@/lib/content/useContent";
-import { visibleFormFields } from "@/lib/content/selectors";
-import { enquiryAdapter } from "@/lib/enquiries/adapter";
+import { socialHref, visibleFormFields } from "@/lib/content/selectors";
 
 export function EnquiryForm() {
   const { content } = useContent();
@@ -19,27 +18,31 @@ export function EnquiryForm() {
     const values: Record<string, string> = {};
     for (const field of fields) values[field.id] = String(data.get(field.id) ?? "");
 
-    setStatus("sending");
     setError("");
-    try {
-      await enquiryAdapter.submit(values);
+    const message = fields.map((field) => `${field.label}: ${values[field.id] || "—"}`).join("\n");
+    const subject = `Enquiry from ${values.name || "website visitor"}`;
+    const email = content.contact.email.trim();
+    const whatsapp = content.socials.find(
+      (social) => social.visible && social.platform.toLowerCase() === "whatsapp",
+    );
+    const whatsappUrl = whatsapp ? socialHref(whatsapp) : "";
+
+    if (email) {
+      window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
       setStatus("sent");
       form.reset();
-    } catch (err) {
-      setStatus("error");
-      setError(err instanceof Error ? err.message : "Your enquiry could not be sent.");
+      return;
     }
-  }
 
-  // No persistence adapter configured: say so plainly rather than accepting an
-  // enquiry that would silently go nowhere.
-  if (!enquiryAdapter.available) {
-    return (
-      <p className="body-lead">
-        The enquiry form is not connected yet.
-        {content.contact.email ? ` Please write to ${content.contact.email}.` : ""}
-      </p>
-    );
+    if (whatsappUrl) {
+      window.location.href = `${whatsappUrl}?text=${encodeURIComponent(`${subject}\n\n${message}`)}`;
+      setStatus("sent");
+      form.reset();
+      return;
+    }
+
+    setStatus("error");
+    setError("Please add an enquiry email or WhatsApp number in the contact settings.");
   }
 
   if (status === "sent") {
