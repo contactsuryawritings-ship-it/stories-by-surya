@@ -1,10 +1,12 @@
 import { initializeApp, getApps } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { getStorage } from "firebase-admin/storage";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { z } from "zod";
 
 const adminApp = getApps().length ? getApps()[0] : initializeApp();
 const storage = getStorage(adminApp);
+const auth = getAuth(adminApp);
 
 const allowedFieldIds = new Set([
   "name",
@@ -110,4 +112,49 @@ export const submitEnquiry = onCall({ region: "us-central1" }, async (request) =
   });
 
   return { ok: true, id };
+});
+
+const publicCacheTag = "stories-by-surya-public";
+
+function configuredAdminEmails() {
+  return (process.env["ADMIN_EMAILS"] ?? process.env["VITE_ADMIN_EMAILS"] ?? "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export const publishPublicCache = onCall({ region: "us-central1" }, async (request) => {
+  const email = request.auth?.token.email?.trim().toLowerCase();
+  if (!email || !configuredAdminEmails().includes(email)) {
+    throw new HttpsError("permission-denied", "You are not authorized to publish content.");
+  }
+
+  await auth.getUser(request.auth!.uid);
+
+  const token = process.env["VERCEL_API_TOKEN"];
+  const projectId = process.env["VERCEL_PROJECT_ID"];
+  if (!token || !projectId) {
+    return {
+      ok: true,
+      configured: false,
+      message: "Content published; CDN purge is not configured.",
+    };
+  }
+
+  const endpoint =
+    process.env["VERCEL_CACHE_INVALIDATION_URL"] ??
+    "https://api.vercel.com/v1/edge-cache/invalidate";
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ projectId, tags: [publicCacheTag] }),
+  });
+  if (!response.ok) {
+    throw new HttpsError("internal", `CDN purge failed (${response.status}).`);
+  }
+
+  return { ok: true, configured: true, message: "Public site refreshed." };
 });

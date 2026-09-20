@@ -90,6 +90,7 @@ export async function saveContent(
   const toWrite: SiteContent = { ...parsed.data, updatedAt: new Date().toISOString() };
   await uploadString(contentRef, JSON.stringify(toWrite, null, 2), "raw", {
     contentType: "application/json",
+    cacheControl: "no-cache, max-age=0, must-revalidate",
   });
 
   // Confirm the write round-trips.

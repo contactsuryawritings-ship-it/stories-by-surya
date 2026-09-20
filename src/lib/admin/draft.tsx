@@ -11,6 +11,7 @@ import {
 import { safeParseContent, type SiteContent } from "../content/schema";
 import { useContent, useSaveContent } from "../content/useContent";
 import { isFirebaseConfigured } from "../firebase/app";
+import { publishPublicCache } from "../content/publish";
 
 /**
  * Dashboard editing session.
@@ -32,6 +33,10 @@ type DraftContextValue = {
   update: (recipe: (draft: SiteContent) => SiteContent) => void;
   save: (nextDraft?: SiteContent) => Promise<void>;
   discard: () => void;
+  publishing: boolean;
+  publishStatus: "idle" | "success" | "error";
+  publishMessage: string | null;
+  publish: () => Promise<void>;
 };
 
 const DraftContext = createContext<DraftContextValue | null>(null);
@@ -47,6 +52,9 @@ export function DraftProvider({ children }: { children: ReactNode }) {
   }));
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [publishStatus, setPublishStatus] = useState<"idle" | "success" | "error">("idle");
+  const [publishMessage, setPublishMessage] = useState<string | null>(null);
 
   // Re-seed from the loaded content until the photographer starts editing.
   useEffect(() => {
@@ -64,6 +72,47 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     setError(null);
     setSession({ draft: content, base: content.updatedAt, dirty: false });
   }, [content]);
+
+  const publish = useCallback(async () => {
+    if (session.dirty) {
+      setPublishStatus("error");
+      setPublishMessage("Save changes before publishing.");
+      return;
+    }
+    if (!isFirebaseConfigured) {
+      setPublishStatus("error");
+      setPublishMessage("Firebase is not configured, so changes cannot be published.");
+      return;
+    }
+    if (!window.confirm("Publish the saved changes to the public site?")) return;
+
+    setPublishing(true);
+    setPublishStatus("idle");
+    setPublishMessage(null);
+    try {
+      const next = {
+        ...session.draft,
+        cacheVersion: session.draft.cacheVersion + 1,
+        publishedAt: new Date().toISOString(),
+      };
+      const saved = await saveMutation.mutateAsync({
+        next,
+        ...(session.base ? { expectedUpdatedAt: session.base } : {}),
+      });
+      setSession({ draft: saved, base: saved.updatedAt, dirty: false });
+      setSavedAt(saved.updatedAt);
+      const result = await publishPublicCache();
+      setPublishStatus("success");
+      setPublishMessage(result.message);
+    } catch (err) {
+      setPublishStatus("error");
+      setPublishMessage(
+        err instanceof Error ? err.message : "The public site could not be refreshed.",
+      );
+    } finally {
+      setPublishing(false);
+    }
+  }, [saveMutation, session.base, session.dirty, session.draft]);
 
   const save = useCallback(
     async (nextDraft = session.draft) => {
@@ -132,8 +181,24 @@ export function DraftProvider({ children }: { children: ReactNode }) {
       update,
       save,
       discard,
+      publishing,
+      publishStatus,
+      publishMessage,
+      publish,
     }),
-    [session, saveMutation.isPending, error, savedAt, update, save, discard],
+    [
+      session,
+      saveMutation.isPending,
+      error,
+      savedAt,
+      update,
+      save,
+      discard,
+      publishing,
+      publishStatus,
+      publishMessage,
+      publish,
+    ],
   );
 
   return <DraftContext.Provider value={value}>{children}</DraftContext.Provider>;

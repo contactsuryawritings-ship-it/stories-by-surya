@@ -15,6 +15,7 @@ import type { ContentImage } from "@/lib/content/schema";
 import { photoFrameStyle, usePhotoAspect } from "./usePhotoAspect";
 import { AspectStage } from "@/components/public/AspectStage";
 import { SelectionBelt } from "@/components/public/SelectionBelt";
+import { prepareImages } from "@/lib/images/preload";
 
 const RippleEffect = lazy(() => import("./effects/RippleDistortion"));
 const DepthEffect = lazy(() => import("./effects/DepthCarousel"));
@@ -28,13 +29,16 @@ function SectionViewport({
   children,
   className,
   style,
+  preloadSources = [],
 }: {
   children: ReactNode;
   className: string;
   style?: CSSProperties | undefined;
+  preloadSources?: string[];
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(false);
+  const [prepared, setPrepared] = useState(false);
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
@@ -50,10 +54,26 @@ function SectionViewport({
     observer.observe(node);
     return () => observer.disconnect();
   }, []);
+  useEffect(() => {
+    if (!active) return;
+    let cancelled = false;
+    void prepareImages(preloadSources, undefined, 1200).then(() => {
+      if (!cancelled) setPrepared(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [active, preloadSources]);
   return (
     <div ref={ref} className={className} style={style}>
-      {active ? children : null}
+      {active && prepared ? children : active ? <SectionPlaceholder /> : null}
     </div>
+  );
+}
+
+function SectionPlaceholder() {
+  return (
+    <div className="absolute inset-0 animate-pulse bg-onyx/90" aria-label="Preparing photographs" />
   );
 }
 
@@ -196,12 +216,16 @@ function StaticGallery({ items, onChange }: GalleryProps & { onChange?: (index: 
 export function RippleDistortion({ items }: GalleryProps) {
   const { index, setIndex, move, gestures } = useGallery(items);
   const ratio = usePhotoAspect(items[index]);
+  const preloadSources = useMemo(() => items.map((item) => item.src), [items]);
   if (!items.length) return null;
   const image = items[index]!;
   return (
     <div className="shell">
       <div className="bg-onyx p-3 text-ivory md:p-6">
-        <SectionViewport className="relative h-[min(60svh,40rem)] overflow-hidden">
+        <SectionViewport
+          className="relative h-[min(60svh,40rem)] overflow-hidden"
+          preloadSources={preloadSources}
+        >
           <div
             className="relative h-full touch-pan-y"
             {...gestures}
@@ -275,12 +299,14 @@ function AnimatedGallery({ items, kind }: GalleryProps & { kind: "depth" | "morp
   );
   const [index, setIndex] = useState(0);
   const ratio = usePhotoAspect(items[index]);
+  const preloadSources = useMemo(() => items.map((item) => item.src), [items]);
   if (!items.length) return null;
   return (
     <div className="shell">
       <SectionViewport
         className={`relative isolate overflow-hidden bg-onyx text-ivory ${kind === "morph" ? "" : "h-[min(70svh,38rem)] min-h-[20rem]"}`}
         style={kind === "morph" ? photoFrameStyle(ratio) : undefined}
+        preloadSources={preloadSources}
       >
         <EffectSurface fallback={<StaticGallery items={items} onChange={setIndex} />}>
           {(onError) =>

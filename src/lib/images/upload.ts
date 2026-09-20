@@ -27,7 +27,7 @@ export async function uploadPortfolioImage(
   const imageId = makeImageId();
   const path = storagePath(imageId, optimized.extension);
   const task = uploadBytesResumable(ref(getFirebaseStorage(), path), optimized.blob, {
-    contentType: "image/webp",
+    contentType: optimized.blob.type || "image/webp",
     cacheControl: "public,max-age=31536000,immutable",
   });
 

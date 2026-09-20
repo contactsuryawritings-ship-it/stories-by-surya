@@ -171,6 +171,8 @@ export const formFieldSchema = z.object({
 
 export const contentSchema = z.object({
   version: z.number().default(1),
+  cacheVersion: z.number().int().min(1).default(1),
+  publishedAt: z.string().default(""),
   updatedAt: z.string().default(""),
   photos: z.array(imageSchema).default([]),
   brand: z.object({
@@ -317,6 +319,10 @@ function migrateContent(input: unknown): unknown {
 
   return {
     ...value,
+    cacheVersion:
+      typeof (value as { cacheVersion?: unknown }).cacheVersion === "number"
+        ? (value as { cacheVersion: number }).cacheVersion
+        : 1,
     photos: uniquePhotos.map((photo, index) => ({ order: index, ...(photo as object) })),
     homepage: {
       ...homepage,

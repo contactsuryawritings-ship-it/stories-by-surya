@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { Field, Panel, TextInput, Toggle } from "@/components/admin/ui";
+import { Btn, Field, Notice, Panel, TextInput, Toggle } from "@/components/admin/ui";
 import { useDraft } from "@/lib/admin/draft";
 
 export const Route = createFileRoute("/admin/settings")({
@@ -8,7 +8,7 @@ export const Route = createFileRoute("/admin/settings")({
 });
 
 function SettingsPage() {
-  const { draft, update } = useDraft();
+  const { draft, update, publish, publishing, publishStatus, publishMessage, dirty } = useDraft();
 
   return (
     <div className="space-y-6">
@@ -107,6 +107,28 @@ function SettingsPage() {
             </div>
           </div>
         </div>
+      </Panel>
+
+      <Panel title="Public site" description="Publish saved changes when your batch is ready.">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="min-w-48 text-sm text-muted-foreground">
+            <p>Cache version: {draft.cacheVersion}</p>
+            <p>
+              {draft.publishedAt
+                ? `Last published: ${new Date(draft.publishedAt).toLocaleString()}`
+                : "Not published yet"}
+            </p>
+          </div>
+          <Btn variant="primary" onClick={() => void publish()} disabled={dirty || publishing}>
+            {publishing ? "Publishing" : "Publish changes"}
+          </Btn>
+        </div>
+        {publishMessage ? (
+          <Notice tone={publishStatus === "error" ? "error" : "info"}>
+            {publishStatus === "success" ? "✓ " : ""}
+            {publishMessage}
+          </Notice>
+        ) : null}
       </Panel>
     </div>
   );

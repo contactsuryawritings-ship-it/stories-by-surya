@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { DriftWall } from "@/components/drift-wall/DriftWall";
 import { EditorialImage } from "@/components/public/EditorialImage";
@@ -22,6 +22,7 @@ import {
   homepagePhotoAllocation,
 } from "@/lib/content/selectors";
 import { useContent } from "@/lib/content/useContent";
+import { prepareImages } from "@/lib/images/preload";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -46,10 +47,59 @@ function Hero() {
   const { content } = useContent();
   const pool = driftWallPool(content);
   const { hero, brand } = content;
+  const criticalSources = useMemo(() => {
+    const criticalImages = driftWallPool(content);
+    const candidates = criticalImages.length
+      ? criticalImages.slice(0, Math.min(criticalImages.length, 9))
+      : hero.fallbackImage
+        ? [hero.fallbackImage]
+        : [];
+    return [...new Set(candidates.map((image) => image.src))];
+  }, [content, hero.fallbackImage]);
+  const [prepared, setPrepared] = useState(!criticalSources.length);
+  const [visible, setVisible] = useState(!criticalSources.length);
+  const [dismissed, setDismissed] = useState(!criticalSources.length);
+
+  useEffect(() => {
+    setPrepared(!criticalSources.length);
+    setVisible(!criticalSources.length);
+    setDismissed(!criticalSources.length);
+    let cancelled = false;
+    let revealTimer = 0;
+    let dismissTimer = 0;
+    void prepareImages(criticalSources).then(() => {
+      if (!cancelled) {
+        setPrepared(true);
+        revealTimer = window.setTimeout(() => {
+          setVisible(true);
+          dismissTimer = window.setTimeout(() => setDismissed(true), 700);
+        }, 40);
+      }
+    });
+    return () => {
+      cancelled = true;
+      window.clearTimeout(revealTimer);
+      window.clearTimeout(dismissTimer);
+    };
+  }, [criticalSources]);
 
   return (
     <section className="relative flex h-[100dvh] min-h-[560px] items-end overflow-hidden bg-onyx">
-      {pool.length ? (
+      {!dismissed ? (
+        <div
+          className={`fixed inset-0 z-50 grid place-items-center bg-onyx text-ivory transition-opacity duration-700 ${visible ? "pointer-events-none opacity-0" : "opacity-100"}`}
+          aria-live="polite"
+        >
+          <div className="text-center">
+            <p className="font-display text-3xl">{brand.wordmark || brand.name}</p>
+            <p className="eyebrow mt-5 opacity-60">Loading the story...</p>
+            <div className="mx-auto mt-6 h-px w-24 overflow-hidden bg-ivory/20">
+              <div className="h-full w-1/2 animate-[pulse_1.8s_ease-in-out_infinite] bg-ivory/70" />
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {prepared && pool.length ? (
         <DriftWall
           items={pool}
           speed={hero.driftWall.speed}
@@ -58,7 +108,7 @@ function Hero() {
           dim={hero.driftWall.dim}
           grayscale={hero.driftWall.grayscale}
         />
-      ) : hero.fallbackImage ? (
+      ) : prepared && hero.fallbackImage ? (
         <>
           <img
             src={hero.fallbackImage.src}
@@ -67,9 +117,9 @@ function Hero() {
           />
           <div className="absolute inset-0 bg-onyx/45" />
         </>
-      ) : (
+      ) : prepared ? (
         <div className="absolute inset-0 bg-onyx" />
-      )}
+      ) : null}
 
       <div className="shell relative z-10 pb-16 text-ivory md:pb-24">
         {hero.eyebrow ? <p className="eyebrow rise-in opacity-70">{hero.eyebrow}</p> : null}
