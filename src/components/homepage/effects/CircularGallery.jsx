@@ -221,7 +221,6 @@ class Media {
     font,
     onError,
   }) {
-    this.onError = onError;
     this.extra = 0;
     this.geometry = geometry;
     this.gl = gl;
@@ -305,7 +304,9 @@ class Media {
     const img = new Image();
     img.crossOrigin = "anonymous";
     this.imageElement = img;
-    img.onerror = () => this.onError?.();
+    // A single unavailable photograph must not tear down the whole gallery.
+    // The renderer remains interactive and the other textures can still load.
+    img.onerror = () => undefined;
     img.onload = () => {
       texture.image = img;
       this.program.uniforms.uImageSizes.value = [img.naturalWidth, img.naturalHeight];

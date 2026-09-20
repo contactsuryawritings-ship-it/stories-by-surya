@@ -1,10 +1,6 @@
 [
   {
-    "origin": [
-      "http://localhost:8080",
-      "http://localhost:8081",
-      "https://stories-by-surya.vercel.app"
-    ],
+    "origin": ["*"],
     "method": ["GET", "HEAD"],
     "responseHeader": [
       "Content-Type",
