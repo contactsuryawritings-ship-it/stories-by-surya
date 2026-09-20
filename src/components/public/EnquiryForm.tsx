@@ -20,7 +20,7 @@ export function EnquiryForm() {
 
     setError("");
     const message = fields.map((field) => `${field.label}: ${values[field.id] || "—"}`).join("\n");
-    const subject = `Enquiry from ${values.name || "website visitor"}`;
+    const subject = `Enquiry from ${values["name"] || "website visitor"}`;
     const email = content.contact.email.trim();
     const whatsapp = content.socials.find(
       (social) => social.visible && social.platform.toLowerCase() === "whatsapp",

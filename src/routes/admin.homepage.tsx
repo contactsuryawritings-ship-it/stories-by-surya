@@ -1,13 +1,60 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { Field, Panel, TextArea, TextInput, Toggle } from "@/components/admin/ui";
-import { useDraft } from "@/lib/admin/draft";
+import { moveItem, useDraft } from "@/lib/admin/draft";
 import { SOCIAL_PLATFORMS } from "@/lib/content/schema";
 
 export const Route = createFileRoute("/admin/homepage")({ component: ContentPage });
 
 function ContentPage() {
   const { draft, update } = useDraft();
+  const availablePhotos = draft.photos
+    .filter((photo) => photo.visible)
+    .sort((a, b) => a.order - b.order);
+  const validIds = new Set(availablePhotos.map((photo) => photo.id));
+  const selectedTopPicks = [...new Set(draft.homepage.topPickImageIds)]
+    .map((id) => availablePhotos.find((photo) => photo.id === id))
+    .filter((photo): photo is (typeof availablePhotos)[number] => Boolean(photo));
+
+  function toggleTopPick(id: string) {
+    update((current) => {
+      const ids = current.homepage.topPickImageIds.filter(
+        (item, index, list) => validIds.has(item) && list.indexOf(item) === index,
+      );
+      const nextIds = ids.includes(id)
+        ? ids.filter((item) => item !== id)
+        : ids.length < 10
+          ? [...ids, id]
+          : ids;
+      return { ...current, homepage: { ...current.homepage, topPickImageIds: nextIds } };
+    });
+  }
+
+  function reorderTopPick(from: number, to: number) {
+    update((current) => ({
+      ...current,
+      homepage: {
+        ...current.homepage,
+        topPickImageIds: moveItem(
+          selectedTopPicks.map((photo) => photo.id),
+          from,
+          to,
+        ),
+      },
+    }));
+  }
+
+  function toggleHomepageSection(id: "ripple" | "depth" | "morph" | "circular", visible: boolean) {
+    update((current) => ({
+      ...current,
+      homepage: {
+        ...current.homepage,
+        sections: current.homepage.sections.map((section) =>
+          section.id === id ? { ...section, visible } : section,
+        ),
+      },
+    }));
+  }
 
   function updateSocial(
     platform: (typeof SOCIAL_PLATFORMS)[number],
@@ -80,6 +127,122 @@ function ContentPage() {
               }
             />
           </Field>
+        </div>
+      </Panel>
+
+      <Panel
+        title="Homepage Sections"
+        description="Photos are shared across all four sections without repeats, starting with one each when you have four photos. Pin up to 10 Top Picks; extra pins appear there as your library grows."
+      >
+        <div className="space-y-6">
+          <div className="grid gap-3 border-b border-hairline pb-6 sm:grid-cols-2 lg:grid-cols-4">
+            {(["ripple", "depth", "morph", "circular"] as const).map((id) => {
+              const item = draft.homepage.sections.find((section) => section.id === id);
+              return (
+                <Toggle
+                  key={id}
+                  checked={item?.visible ?? true}
+                  onChange={(value) => toggleHomepageSection(id, value)}
+                  label={
+                    id === "ripple"
+                      ? "Top Picks"
+                      : id === "depth"
+                        ? "Depth Carousel"
+                        : id === "morph"
+                          ? "Morph Slider"
+                          : "Circular Gallery"
+                  }
+                />
+              );
+            })}
+          </div>
+
+          <div>
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <div>
+                <p className="eyebrow opacity-60">Top Picks</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {selectedTopPicks.length}/10 pinned
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Select from visible photographs below.
+              </p>
+            </div>
+            {selectedTopPicks.length ? (
+              <ol className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                {selectedTopPicks.map((photo, index) => (
+                  <li key={photo.id} className="border border-foreground bg-background p-2">
+                    <img
+                      src={photo.src}
+                      alt={photo.alt}
+                      className="aspect-[4/5] w-full object-cover"
+                      loading="lazy"
+                    />
+                    <div className="mt-2 flex items-center justify-between gap-1">
+                      <span className="text-xs">{index + 1}</span>
+                      <span className="flex gap-1">
+                        <button
+                          type="button"
+                          className="px-2 py-1 text-sm hover:bg-muted"
+                          disabled={index === 0}
+                          onClick={() => reorderTopPick(index, index - 1)}
+                          aria-label="Move earlier"
+                        >
+                          ←
+                        </button>
+                        <button
+                          type="button"
+                          className="px-2 py-1 text-sm hover:bg-muted"
+                          disabled={index === selectedTopPicks.length - 1}
+                          onClick={() => reorderTopPick(index, index + 1)}
+                          aria-label="Move later"
+                        >
+                          →
+                        </button>
+                        <button
+                          type="button"
+                          className="px-2 py-1 text-xs hover:bg-muted"
+                          onClick={() => toggleTopPick(photo.id)}
+                        >
+                          Remove
+                        </button>
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+            {availablePhotos.length ? (
+              <div className="mt-6 grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-8">
+                {availablePhotos.map((photo) => {
+                  const selected = draft.homepage.topPickImageIds.includes(photo.id);
+                  return (
+                    <button
+                      key={photo.id}
+                      type="button"
+                      onClick={() => toggleTopPick(photo.id)}
+                      aria-pressed={selected}
+                      aria-label={`${selected ? "Unpin" : "Pin"} ${photo.alt || `photograph ${photo.order + 1}`}`}
+                      disabled={!selected && selectedTopPicks.length >= 10}
+                      className={`overflow-hidden border text-left disabled:cursor-not-allowed disabled:opacity-30 ${selected ? "border-foreground" : "border-hairline opacity-65 hover:opacity-100"}`}
+                    >
+                      <img
+                        src={photo.src}
+                        alt={photo.alt}
+                        className="aspect-square w-full object-cover"
+                        loading="lazy"
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="mt-5 border border-dashed border-hairline px-4 py-8 text-center text-sm text-muted-foreground">
+                Upload and publish photographs to curate Top Picks.
+              </p>
+            )}
+          </div>
         </div>
       </Panel>
 

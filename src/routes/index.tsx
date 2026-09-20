@@ -1,18 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, type ReactNode } from "react";
 
 import { DriftWall } from "@/components/drift-wall/DriftWall";
 import { EditorialImage } from "@/components/public/EditorialImage";
 import { EnquiryForm } from "@/components/public/EnquiryForm";
-import { FilmCard } from "@/components/public/FilmCard";
+import { FilmGallery } from "@/components/public/FilmGallery";
 import { PublicLayout } from "@/components/public/PublicLayout";
 import { Reveal } from "@/components/public/Reveal";
 import { ContentLink } from "@/components/public/ContentLink";
 import {
+  CircularGallery,
+  DepthCarousel,
+  MorphSlider,
+  RippleDistortion,
+} from "@/components/homepage/InteractiveSections";
+import {
   driftWallPool,
-  portfolioPhotos,
   publishedFilms,
   socialHref,
   visibleSocials,
+  homepagePhotoAllocation,
 } from "@/lib/content/selectors";
 import { useContent } from "@/lib/content/useContent";
 
@@ -100,49 +107,48 @@ function SectionHeading({ eyebrow, heading }: { eyebrow?: string; heading?: stri
 
 function Home() {
   const { content } = useContent();
-  const photos = portfolioPhotos(content);
+  const allocation = useMemo(() => homepagePhotoAllocation(content), [content]);
   const films = publishedFilms(content);
   const socials = visibleSocials(content);
+  const section = (id: "ripple" | "depth" | "morph" | "circular") =>
+    content.homepage.sections.find((item) => item.id === id && item.visible);
+
+  const renderPhotoSection = (
+    id: "ripple" | "depth" | "morph" | "circular",
+    children: ReactNode,
+  ) => {
+    const config = section(id);
+    if (!config) return null;
+    const images =
+      id === "ripple"
+        ? allocation.topPicks
+        : id === "depth"
+          ? allocation.depthCarousel
+          : id === "morph"
+            ? allocation.morphSlider
+            : allocation.circularGallery;
+    if (!images.length) return null;
+    return (
+      <section id={id} aria-label={config.label || id}>
+        <SectionHeading eyebrow={config.eyebrow} heading={config.heading} />
+        {children}
+      </section>
+    );
+  };
 
   return (
     <PublicLayout overlayHeader>
       <Hero />
 
-      <div className="flex flex-col gap-28 py-28 md:gap-44 md:py-44">
-        <section id="work" aria-label="Selected work">
-          <SectionHeading eyebrow="Selected work" heading="Photographs with room to breathe." />
-          <div className="shell grid gap-12 md:grid-cols-12 md:gap-x-8 md:gap-y-28">
-            {photos.map((photo, index) => {
-              const layout =
-                index % 5 === 0
-                  ? "md:col-span-12"
-                  : index % 5 === 1
-                    ? "md:col-span-7"
-                    : index % 5 === 2
-                      ? "md:col-span-5 md:mt-24"
-                      : index % 5 === 3
-                        ? "md:col-span-5"
-                        : "md:col-span-7 md:mt-24";
-              const ratio =
-                index % 5 === 0 ? "16 / 9" : photo.orientation === "portrait" ? "4 / 5" : "3 / 2";
-              return (
-                <Reveal key={photo.id} className={layout} delay={index * 35}>
-                  <EditorialImage image={photo} ratio={ratio} />
-                </Reveal>
-              );
-            })}
-          </div>
-        </section>
+      <div id="work" className="flex flex-col gap-28 py-28 md:gap-44 md:py-44">
+        {renderPhotoSection("ripple", <RippleDistortion items={allocation.topPicks} />)}
+        {renderPhotoSection("depth", <DepthCarousel items={allocation.depthCarousel} />)}
+        {renderPhotoSection("morph", <MorphSlider items={allocation.morphSlider} />)}
+        {renderPhotoSection("circular", <CircularGallery items={allocation.circularGallery} />)}
 
         <section id="films" aria-label="Films">
           <SectionHeading eyebrow="Films" heading="Moving images, quietly held." />
-          <div className="shell grid gap-16 md:grid-cols-2">
-            {films.map((film, index) => (
-              <Reveal key={film.id} delay={index * 40}>
-                <FilmCard film={film} />
-              </Reveal>
-            ))}
-          </div>
+          <FilmGallery films={films} />
         </section>
 
         <section id="about" aria-label="About">

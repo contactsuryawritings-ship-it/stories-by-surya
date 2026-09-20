@@ -1,49 +1,59 @@
 import type { Film } from "@/lib/content/schema";
-import { EditorialImage } from "./EditorialImage";
+import { filmAspectRatio, filmLabel, getFilmSource } from "@/lib/content/film";
 
-export function FilmCard({ film }: { film: Film }) {
-  const embedUrl = getEmbedUrl(film);
+export function FilmMedia({ film }: { film: Film }) {
+  const embedUrl = getFilmSource(film.url)?.embedUrl;
+  if (embedUrl)
+    return (
+      <iframe
+        src={embedUrl}
+        title={film.title}
+        className="h-full w-full border-0"
+        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+        allowFullScreen
+        loading="lazy"
+      />
+    );
+  if (film.cover)
+    return (
+      <img
+        src={film.cover.src}
+        alt={film.cover.alt}
+        className="h-full w-full object-contain"
+        loading="lazy"
+      />
+    );
+  return (
+    <div className="flex h-full items-center justify-center bg-onyx">
+      <span className="eyebrow text-ivory opacity-70">
+        {film.contentType === "post" ? "Post" : "Reel"}
+      </span>
+    </div>
+  );
+}
 
-  const body = (
+export function FilmDetails({ film }: { film: Film }) {
+  return (
     <>
-      {embedUrl ? (
-        <div className="overflow-hidden bg-onyx" style={{ aspectRatio: "16 / 9" }}>
-          <iframe
-            src={embedUrl}
-            title={film.title}
-            className="h-full w-full border-0"
-            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-            allowFullScreen
-            loading="lazy"
-          />
-        </div>
-      ) : film.cover ? (
-        <EditorialImage image={film.cover} ratio="16 / 9" />
-      ) : (
-        <div className="flex items-center justify-center bg-onyx" style={{ aspectRatio: "16 / 9" }}>
-          <span className="eyebrow text-ivory opacity-70">Film</span>
-        </div>
-      )}
-      <div className="mt-5 flex items-baseline justify-between gap-6">
+      <div className="mt-5 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
         <h3 className="display-md">{film.title}</h3>
-        {film.url ? (
-          <span className="eyebrow shrink-0 opacity-60">
-            {film.platform === "instagram" ? "Instagram Reel" : "YouTube"}
-          </span>
-        ) : null}
+        {film.url ? <span className="eyebrow shrink-0 opacity-60">{filmLabel(film)}</span> : null}
       </div>
       {film.description ? <p className="body-lead mt-3 max-w-lg">{film.description}</p> : null}
     </>
   );
-
-  return <article className="group">{body}</article>;
 }
 
-function getEmbedUrl(film: Film) {
-  if (film.platform === "instagram") {
-    const match = film.url.match(/instagram\.com\/(?:reel|p)\/([^/?#]+)/i);
-    return match ? `https://www.instagram.com/reel/${match[1]}/embed` : null;
-  }
-  const match = film.url.match(/(?:v=|youtu\.be\/|shorts\/)([A-Za-z0-9_-]+)/i);
-  return match ? `https://www.youtube.com/embed/${match[1]}` : null;
+export function FilmCard({ film }: { film: Film }) {
+  return (
+    <article className="group">
+      <div
+        className="overflow-hidden bg-onyx"
+        style={{ aspectRatio: filmAspectRatio(film.aspectRatio) }}
+      >
+        <FilmMedia film={film} />
+      </div>
+      <FilmDetails film={film} />
+    </article>
+  );
 }

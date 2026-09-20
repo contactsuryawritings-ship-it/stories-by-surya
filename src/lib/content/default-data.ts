@@ -33,6 +33,38 @@ const raw = {
   homepage: {
     sections: [
       {
+        id: "ripple",
+        label: "Top Picks",
+        eyebrow: "Top Picks",
+        heading: "A closer look.",
+        visible: true,
+        order: 0,
+      },
+      {
+        id: "depth",
+        label: "Selected Work",
+        eyebrow: "Selected Work",
+        heading: "Images in sequence.",
+        visible: true,
+        order: 1,
+      },
+      {
+        id: "morph",
+        label: "Stories",
+        eyebrow: "Stories",
+        heading: "One frame becoming another.",
+        visible: true,
+        order: 2,
+      },
+      {
+        id: "circular",
+        label: "Archive",
+        eyebrow: "Archive",
+        heading: "Keep looking.",
+        visible: true,
+        order: 3,
+      },
+      {
         id: "featured",
         label: "Featured Stories",
         eyebrow: "Selected",
@@ -53,6 +85,7 @@ const raw = {
       { id: "contact", label: "Enquire", eyebrow: "Enquire", heading: "", visible: true, order: 4 },
     ],
     featuredGalleryIds: [],
+    topPickImageIds: [],
     aboutPreview: "",
     contactHeading: "",
     contactBody: "",

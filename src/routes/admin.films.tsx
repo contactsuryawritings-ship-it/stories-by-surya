@@ -7,35 +7,20 @@ import {
   Field,
   Notice,
   Panel,
+  SelectInput,
   TextArea,
   TextInput,
   Toggle,
 } from "@/components/admin/ui";
 import { moveItem, useDraft } from "@/lib/admin/draft";
 import { reindex } from "@/lib/admin/draft";
-import type { Film } from "@/lib/content/schema";
+import { FILM_ASPECT_RATIOS, type Film } from "@/lib/content/schema";
+import { filmLabel, getFilmSource } from "@/lib/content/film";
 import { makeId } from "@/lib/images/optimize";
 
 export const Route = createFileRoute("/admin/films")({
   component: FilmsPage,
 });
-
-function normalizeFilmUrl(url: string) {
-  const value = url.trim();
-  if (!value)
-    return { valid: false, platform: "youtube" as const, message: "Add a supported URL." };
-  const instagram = value.match(/https?:\/\/(?:www\.)?instagram\.com\/(?:reel|p)\//i);
-  const youtube = value.match(
-    /https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([A-Za-z0-9_-]+)/i,
-  );
-  if (instagram) return { valid: true, platform: "instagram" as const, message: "Instagram reel" };
-  if (youtube) return { valid: true, platform: "youtube" as const, message: "YouTube video" };
-  return {
-    valid: false,
-    platform: "youtube" as const,
-    message: "Use a valid Instagram Reel or YouTube URL.",
-  };
-}
 
 function FilmsPage() {
   const { draft, update } = useDraft();
@@ -48,7 +33,9 @@ function FilmsPage() {
     setForm({
       id: makeId("film"),
       title: "New film",
-      platform: "youtube",
+      platform: "instagram",
+      contentType: "reel",
+      aspectRatio: "9:16",
       url: "",
       description: "",
       cover: null,
@@ -65,9 +52,9 @@ function FilmsPage() {
 
   function saveFilm() {
     if (!form) return;
-    const normalized = normalizeFilmUrl(form.url);
-    if (!normalized.valid) {
-      setError(normalized.message);
+    const normalized = getFilmSource(form.url);
+    if (!normalized) {
+      setError("Use a valid Instagram Reel, Instagram Post, or YouTube URL.");
       return;
     }
 
@@ -116,7 +103,7 @@ function FilmsPage() {
       {form ? (
         <Panel
           title={form.id ? "Film details" : "New film"}
-          description="Instagram Reels and YouTube links only — no uploaded video files."
+          description="Add an Instagram Reel, Instagram Post, or YouTube link."
         >
           <div className="space-y-4">
             <Field label="Title">
@@ -125,13 +112,58 @@ function FilmsPage() {
                 onChange={(value) => setForm({ ...form, title: value })}
               />
             </Field>
-            <Field label="Source URL" hint="Use a valid Instagram Reel or YouTube URL.">
+            <Field label="Source URL" hint="Use an Instagram Reel, Instagram Post, or YouTube URL.">
               <TextInput
                 value={form.url}
-                onChange={(value) => setForm({ ...form, url: value })}
+                onChange={(value) => {
+                  const source = getFilmSource(value);
+                  const previous = getFilmSource(form.url);
+                  const changedSource =
+                    source &&
+                    (!previous ||
+                      source.platform !== previous.platform ||
+                      source.contentType !== previous.contentType ||
+                      source.aspectRatio !== previous.aspectRatio);
+                  setForm({
+                    ...form,
+                    url: value,
+                    ...(changedSource
+                      ? {
+                          platform: source.platform,
+                          contentType: source.contentType,
+                          aspectRatio: source.aspectRatio,
+                        }
+                      : {}),
+                  });
+                }}
                 type="url"
               />
             </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Reel or Post">
+                <SelectInput
+                  value={form.contentType}
+                  onChange={(contentType) => setForm({ ...form, contentType })}
+                  options={[
+                    { value: "reel", label: "Reel" },
+                    { value: "post", label: "Post" },
+                  ]}
+                />
+              </Field>
+              <Field
+                label="Aspect ratio"
+                hint="Choose the proportions of the original post or reel."
+              >
+                <SelectInput
+                  value={form.aspectRatio}
+                  onChange={(aspectRatio) => setForm({ ...form, aspectRatio })}
+                  options={FILM_ASPECT_RATIOS.map((value) => ({
+                    value,
+                    label: `${value}${value === "9:16" ? " — Vertical" : value === "1:1" ? " — Square" : value === "4:5" || value === "3:4" ? " — Portrait" : " — Landscape"}`,
+                  }))}
+                />
+              </Field>
+            </div>
             <Field label="Description">
               <TextArea
                 value={form.description}
@@ -167,7 +199,7 @@ function FilmsPage() {
                 <div>
                   <p className="font-medium">{film.title || "Untitled film"}</p>
                   <p className="text-xs text-muted-foreground">
-                    {film.platform === "instagram" ? "Instagram Reel" : "YouTube"}
+                    {filmLabel(film)} · {film.aspectRatio}
                   </p>
                   <p className="mt-2 break-all text-xs text-muted-foreground">
                     {film.url || "No link yet"}
@@ -221,7 +253,7 @@ function FilmsPage() {
           </div>
         ) : (
           <EmptyState>
-            No films have been added yet. Add a Reel or YouTube link to start the motion section.
+            No films have been added yet. Add an Instagram Reel, Post, or YouTube link.
           </EmptyState>
         )}
       </Panel>

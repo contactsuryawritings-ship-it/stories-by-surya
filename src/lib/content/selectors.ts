@@ -1,4 +1,5 @@
 import type { Category, ContentImage, Film, Gallery, SiteContent, Social } from "./schema";
+import { allocateHomepagePhotos, type HomepageAllocation } from "./allocation";
 
 const byOrder = <T extends { order: number }>(a: T, b: T) => a.order - b.order;
 
@@ -81,8 +82,14 @@ export function driftWallPool(content: SiteContent): ContentImage[] {
 
 export function portfolioPhotos(content: SiteContent): ContentImage[] {
   const photos = content.photos.filter((image) => image.visible);
-  if (photos.length) return photos;
-  return publishedGalleries(content).flatMap(visibleImages);
+  return photos.sort(byOrder);
+}
+
+export function homepagePhotoAllocation(content: SiteContent): HomepageAllocation {
+  return allocateHomepagePhotos({
+    publishedPhotos: portfolioPhotos(content),
+    topPickImageIds: content.homepage.topPickImageIds,
+  });
 }
 
 export function galleryImageMap(gallery: Gallery): Map<string, ContentImage> {

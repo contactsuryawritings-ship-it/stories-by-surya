@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getFilmSource } from "./film.ts";
 
 /**
  * Runtime schema for /content/data.json — the single source of truth for all
@@ -10,8 +11,8 @@ export const imageSchema = z.object({
   src: z.string().min(1),
   path: z.string().default(""),
   alt: z.string().default(""),
-  width: z.number().int().positive().default(2400),
-  height: z.number().int().positive().default(1600),
+  width: z.number().int().positive().nullable().default(null),
+  height: z.number().int().positive().nullable().default(null),
   orientation: z.enum(["landscape", "portrait", "square"]).default("landscape"),
   visible: z.boolean().default(true),
   order: z.number().default(0),
@@ -83,16 +84,43 @@ export const categorySchema = z.object({
   visible: z.boolean().default(true),
 });
 
-export const filmSchema = z.object({
-  id: z.string().min(1),
-  title: z.string().min(1),
-  platform: z.enum(["instagram", "youtube"]).default("youtube"),
-  url: z.string().default(""),
-  description: z.string().default(""),
-  cover: imageSchema.nullable().default(null),
-  published: z.boolean().default(false),
-  order: z.number().default(0),
-});
+export const FILM_ASPECT_RATIOS = [
+  "9:16",
+  "4:5",
+  "3:4",
+  "1:1",
+  "4:3",
+  "3:2",
+  "16:9",
+  "1.91:1",
+] as const;
+
+export const filmSchema = z.preprocess(
+  (input) => {
+    if (!input || typeof input !== "object") return input;
+    const value = input as Record<string, unknown>;
+    const source = typeof value["url"] === "string" ? getFilmSource(value["url"]) : null;
+    const contentType = value["contentType"] ?? source?.contentType ?? "reel";
+    return {
+      ...value,
+      contentType,
+      aspectRatio:
+        value["aspectRatio"] ?? (contentType === "post" ? "1:1" : (source?.aspectRatio ?? "16:9")),
+    };
+  },
+  z.object({
+    id: z.string().min(1),
+    title: z.string().min(1),
+    platform: z.enum(["instagram", "youtube"]).default("youtube"),
+    contentType: z.enum(["reel", "post"]),
+    aspectRatio: z.enum(FILM_ASPECT_RATIOS),
+    url: z.string().default(""),
+    description: z.string().default(""),
+    cover: imageSchema.nullable().default(null),
+    published: z.boolean().default(false),
+    order: z.number().default(0),
+  }),
+);
 
 export const navItemSchema = z.object({
   id: z.string().min(1),
@@ -103,7 +131,17 @@ export const navItemSchema = z.object({
 });
 
 export const homepageSectionSchema = z.object({
-  id: z.enum(["featured", "categories", "films", "about", "contact"]),
+  id: z.enum([
+    "ripple",
+    "depth",
+    "morph",
+    "circular",
+    "featured",
+    "categories",
+    "films",
+    "about",
+    "contact",
+  ]),
   label: z.string().default(""),
   eyebrow: z.string().default(""),
   heading: z.string().default(""),
@@ -162,6 +200,7 @@ export const contentSchema = z.object({
   homepage: z.object({
     sections: z.array(homepageSectionSchema).default([]),
     featuredGalleryIds: z.array(z.string()).default([]),
+    topPickImageIds: z.array(z.string()).max(10).default([]),
     aboutPreview: z.string().default(""),
     contactHeading: z.string().default(""),
     contactBody: z.string().default(""),
@@ -234,15 +273,14 @@ export function safeParseContent(input: unknown) {
 /** Keep existing gallery-backed content readable while photos become the V1 source. */
 function migrateContent(input: unknown): unknown {
   if (!input || typeof input !== "object") return input;
-  const value = input as { photos?: unknown; galleries?: unknown };
-  if (!Array.isArray(value.galleries)) return input;
-
-  const legacyPhotos = value.galleries.flatMap((gallery) => {
+  const value = input as { photos?: unknown; galleries?: unknown; homepage?: unknown };
+  const galleries = Array.isArray(value.galleries) ? value.galleries : [];
+  const legacyPhotos = galleries.flatMap((gallery) => {
     if (!gallery || typeof gallery !== "object") return [];
-    const item = gallery as { images?: unknown };
-    return Array.isArray(item.images) ? item.images : [];
+    const item = gallery as { images?: unknown; published?: unknown };
+    return item.published !== false && Array.isArray(item.images) ? item.images : [];
   });
-  const photos = [...(Array.isArray(value.photos) ? value.photos : []), ...legacyPhotos];
+  const photos = Array.isArray(value.photos) ? value.photos : legacyPhotos;
   const seen = new Set<string>();
   const uniquePhotos = photos.filter((photo) => {
     if (!photo || typeof photo !== "object") return false;
@@ -252,8 +290,40 @@ function migrateContent(input: unknown): unknown {
     seen.add(key);
     return true;
   });
+  const homepage = value.homepage && typeof value.homepage === "object" ? value.homepage : {};
+  const homepageValue = homepage as { sections?: unknown; topPickImageIds?: unknown };
+  const existingSections = Array.isArray(homepageValue.sections) ? homepageValue.sections : [];
+  const existingIds = new Set(
+    existingSections.flatMap((section) =>
+      section && typeof section === "object" && "id" in section ? [String(section.id)] : [],
+    ),
+  );
+  const sectionSeeds: [string, string, string, string][] = [
+    ["ripple", "Top Picks", "Top Picks", "A closer look."],
+    ["depth", "Selected Work", "Selected Work", "Images in sequence."],
+    ["morph", "Stories", "Stories", "One frame becoming another."],
+    ["circular", "Archive", "Archive", "Keep looking."],
+  ];
+  const newSections = sectionSeeds
+    .map(([id, label, eyebrow, heading], order) => ({
+      id,
+      label,
+      eyebrow,
+      heading,
+      visible: true,
+      order,
+    }))
+    .filter((section) => !existingIds.has(section.id));
+
   return {
     ...value,
-    photos: uniquePhotos.map((photo, index) => ({ ...(photo as object), order: index })),
+    photos: uniquePhotos.map((photo, index) => ({ order: index, ...(photo as object) })),
+    homepage: {
+      ...homepage,
+      sections: [...existingSections, ...newSections],
+      topPickImageIds: Array.isArray(homepageValue.topPickImageIds)
+        ? [...new Set(homepageValue.topPickImageIds)].slice(0, 10)
+        : [],
+    },
   };
 }

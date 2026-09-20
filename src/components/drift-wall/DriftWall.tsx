@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { ContentImage } from "@/lib/content/schema";
 import { useReducedMotion, useWallBreakpoint } from "./useReducedMotion";
@@ -31,12 +31,12 @@ function variance(index: number) {
   return ((h >>> 8) % 1000) / 1000;
 }
 
-function sourceAspect(image: ContentImage) {
-  const measured = image.width > 0 && image.height > 0 ? image.width / image.height : 1;
+function sourceAspect(image: ContentImage, naturalAspect?: number) {
+  const measured =
+    image.width && image.height ? image.width / image.height : (naturalAspect ?? Number.NaN);
   const orientation = image.orientation;
   const fallback = orientation === "portrait" ? 2 / 3 : orientation === "landscape" ? 3 / 2 : 1;
-  const aspect = Number.isFinite(measured) && measured > 0 ? measured : fallback;
-  return Math.min(1.75, Math.max(0.62, aspect));
+  return Number.isFinite(measured) && measured > 0 ? measured : fallback;
 }
 
 const CONFIG = {
@@ -58,6 +58,7 @@ export function DriftWall({
   const bp = useWallBreakpoint();
   const cfg = CONFIG[bp];
   const stageRef = useRef<HTMLDivElement>(null);
+  const [naturalAspects, setNaturalAspects] = useState<Record<string, number>>({});
 
   const columns = useMemo(() => {
     if (!items.length) return [];
@@ -79,10 +80,10 @@ export function DriftWall({
       const image = items[imageIndex]!;
       packed[columnIndex]!.push(image);
       lastIds[columnIndex] = image.id;
-      heights[columnIndex]! += 1 / sourceAspect(image);
+      heights[columnIndex]! += 1 / sourceAspect(image, naturalAspects[image.id]);
     }
     return packed;
-  }, [items, cfg.columns, cfg.rows]);
+  }, [items, cfg.columns, cfg.rows, naturalAspects]);
 
   useEffect(() => {
     if (reduced || parallax <= 0 || bp === "mobile") return;
@@ -161,17 +162,27 @@ export function DriftWall({
                           key={`${copy}-${i}-${image.id}`}
                           className="overflow-hidden bg-onyx"
                           style={{
-                            aspectRatio: sourceAspect(image),
+                            aspectRatio: sourceAspect(image, naturalAspects[image.id]),
                             marginBottom: `${cfg.gap}px`,
                           }}
                         >
                           <img
                             src={image.src}
                             alt=""
-                            width={image.width}
-                            height={image.height}
+                            width={image.width ?? undefined}
+                            height={image.height ?? undefined}
                             loading={copy === 0 && i < 3 ? "eager" : "lazy"}
                             decoding="async"
+                            onLoad={(event) => {
+                              if (image.width && image.height) return;
+                              const { naturalWidth, naturalHeight } = event.currentTarget;
+                              if (naturalWidth && naturalHeight) {
+                                setNaturalAspects((current) => ({
+                                  ...current,
+                                  [image.id]: naturalWidth / naturalHeight,
+                                }));
+                              }
+                            }}
                             className="h-full w-full object-cover"
                             style={{ filter: grayscale ? "grayscale(1)" : undefined }}
                           />
